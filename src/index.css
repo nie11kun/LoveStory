@@ -1,0 +1,61 @@
+@import "tailwindcss";
+
+@theme {
+  --font-headline: "Playfair Display", "Noto Serif SC", serif;
+  --font-body: "Noto Serif SC", "Plus Jakarta Sans", sans-serif;
+  --font-label: "Plus Jakarta Sans", sans-serif;
+
+  --color-primary: #8b4c50;
+  --color-primary-container: #e5989b;
+  --color-on-primary-container: #672f33;
+  --color-secondary: #7d562d;
+  --color-secondary-container: #ffca98;
+  --color-background: #fdf8f5;
+  --color-surface: #fdf8f5;
+  --color-surface-container: #f2edea;
+  --color-surface-container-low: #f8f3f0;
+  --color-surface-container-high: #ece7e4;
+  --color-surface-container-highest: #e6e2df;
+  --color-on-surface: #1c1b1a;
+  --color-on-surface-variant: #50453b;
+  --color-outline: #82756a;
+  --color-outline-variant: #d4c4b7;
+  --color-tertiary: #7e525c;
+  --color-tertiary-fixed: #ffd9df;
+  --color-on-tertiary-fixed: #31111a;
+}
+
+@layer base {
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+
+  body {
+    @apply bg-background text-on-surface font-body antialiased;
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-8px); }
+  75% { transform: translateX(8px); }
+}
+
+.animate-shake {
+  animation: shake 0.2s ease-in-out 0s 2;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.5s ease-out forwards;
+}
