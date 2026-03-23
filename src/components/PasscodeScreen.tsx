@@ -54,15 +54,15 @@ export const PasscodeScreen = ({
         </button>
       )}
 
-      <div className="text-center mb-12 space-y-4 max-w-md">
-        <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-surface-container-low mb-6 shadow-sm">
+      <div className="text-center mb-6 space-y-4 max-w-md">
+        <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-surface-container-low mb-2 shadow-sm">
           <Lock size={40} className="text-primary" />
         </div>
-        <h1 className="font-headline font-bold text-4xl tracking-tight text-on-surface">{title}</h1>
+        <h1 className="font-headline font-bold text-3xl sm:text-4xl tracking-tight text-on-surface">{title}</h1>
         <p className="font-headline italic text-on-surface-variant text-lg">{subtitle}</p>
       </div>
 
-      <div className={`flex gap-6 mb-12 transition-transform ${error ? 'animate-shake' : ''}`}>
+      <div className={`flex gap-6 mb-6 transition-transform ${error ? 'animate-shake' : ''}`}>
         {[0, 1, 2, 3].map((i) => (
           <div 
             key={i} 

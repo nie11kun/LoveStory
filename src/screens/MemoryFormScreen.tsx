@@ -157,15 +157,15 @@ export const MemoryFormScreen = ({ t, onSave, onNavigate, initialMemory, profile
           </label>
         </div>
         
-        <div className="mt-4 flex gap-2">
+        <div className="mt-4 flex flex-col sm:flex-row gap-2">
           <input 
             type="url" 
             placeholder="粘贴网络图片/视频URL" 
-            className="flex-1 bg-surface-container-low border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary-container/30 text-on-surface"
+            className="flex-1 w-full bg-surface-container-low border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary-container/30 text-on-surface"
             value={networkInput}
             onChange={(e) => setNetworkInput(e.target.value)}
           />
-          <button type="button" onClick={addNetworkUrl} className="px-4 py-2 bg-primary/10 text-primary rounded-xl font-body text-sm hover:bg-primary/20 transition-colors whitespace-nowrap">
+          <button type="button" onClick={addNetworkUrl} className="w-full sm:w-auto px-4 py-3 sm:py-2 bg-primary/10 text-primary rounded-xl font-body text-sm hover:bg-primary/20 transition-colors whitespace-nowrap">
             添加网络媒体
           </button>
         </div>

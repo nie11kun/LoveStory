@@ -1,5 +1,10 @@
 # LoveStory ❤️
 
+![React](https://img.shields.io/badge/React-19.0-blue?logo=react&logoColor=fff)
+![Vite](https://img.shields.io/badge/Vite-6.0-646CFF?logo=vite&logoColor=fff)
+![TailwindCSS](https://img.shields.io/badge/Tailwind-4.0-38B2AC?logo=tailwindcss&logoColor=fff)
+![Node.js](https://img.shields.io/badge/Node.js-339933?logo=node.js&logoColor=fff)
+
 **LoveStory** 是一个专为情侣设计的私密爱情时光机与数字纪念册。
 它采用极其轻量的前后端分离架构，但通过巧妙的工程设计，最终能合并为单一服务端进程部署。所有的珍贵回忆、照片视频、纪念日与专属标签，均被安全、结构化地永久保存在你自己的服务器上。
 
@@ -24,9 +29,19 @@
 
 ---
 
+## 🧰 技术栈概览
+
+- **前端核心**：采用 **React 19** 构建原生级别的响应式组件树，并使用 **Vite 6** 执行极致性能的热重载以及编译。
+- **视觉及动效**：基于原子化 CSS 引擎 **TailwindCSS 4** 实现精准的响应式布局，配合 **Framer Motion** 实现高级微交互及全屏画廊弹窗，以及 **Lucide React** 提供全站的无极矢量图标集。
+- **后端服务**：依靠纯粹的 **Node.js (Express)** 接管所有本地 API 与静态分发路由，使用 **Multer** 处理物理文件无损保存。
+
+---
+
 ## 🚀 启动与部署
 
 ### 1. 本地开发 (Development)
+**系统环境要求**：Node.js 18.0 或更高版本。
+
 LoveStory 使用 Vite (React) 提供极致的前端体验，后台依托 Node.js (Express)：
 
 ```bash
@@ -56,6 +71,46 @@ npm install --production
 node server.js
 # 建议使用 pm2 守护进程： pm2 start server.js --name "LoveStory"
 ```
+
+### 3. Nginx 反向代理配置 (可选)
+如果你的服务器上使用 Nginx 作为 Web 服务器，并且你希望通过子路径（例如 `https://yourdomain.com/lovestory/`）或者主域名直接访问它，可以通过以下规则将外部流量桥接到本地的 `3001` 端口：
+
+**作为主域名根目录直接访问 (`/`)：**
+```nginx
+server {
+    listen 80;
+    server_name yourdomain.com; # 替换为你的域名
+
+    location / {
+        proxy_pass http://127.0.0.1:3001;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+        
+        # 传递真实的用户 IP 和协议信息
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+```
+
+**作为子路径访问（例如 `/lovestory`）：**
+```nginx
+location ^~ /lovestory {
+    proxy_pass http://127.0.0.1:3001;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection 'upgrade';
+    proxy_set_header Host $host;
+    
+    # 将前端的静态资源及 API 请求统一转交
+    proxy_set_header X-Real-IP $remote_addr;
+}
+```
+*(注意：如果你使用子路径部署，Vite 在打包时需要在 `vite.config.ts` 指定 `base: '/lovestory/'` 才能正确加载静态资产。)*
 
 ---
 
@@ -97,6 +152,14 @@ LoveStory/
 │   ├── types.ts           # TypeScript 全局数据模型
 │   └── index.css          # Tailwind 基础注入点及全局原生覆盖
 ```
+
+## 💾 数据备份与灾难恢复
+
+因为本系统秉持着“零数据库依赖”的开发原则，它不需要任何诸如 MySQL 或 MongoDB 等外部庞杂数据库服务。
+
+1. **备份**：只需要定期把项目里的 `data.json` 和你上传过媒体的 `uploads/` 这两个归档件压缩进本地或者推到异地（云端等），你的爱情数字资产就实现了完整隔离和 100% 安全备份。
+2. **极速恢复**：要在全新的机器或系统上恢复应用，在新拉取的框架代码下只要执行一下 `npm install --production`，再把你备份好的那两个核心资产覆盖进去，立刻就能 0 差异无缝启动（别忘了放 `.env`）。
+3. **出厂重置**：如果想彻底推翻重来清空所有的历史记忆，删掉 `data.json` 然后重新执行一下 `node server.js` 启动命令即可，系统会自动帮你重构基础模型。
 
 ## 💖 寄语
 

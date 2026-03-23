@@ -21,7 +21,16 @@ export default function App() {
   const [profile, setProfile] = useState<UserProfile | null>(null);
 
   const [activeMemory, setActiveMemory] = useState<Memory | null>(null);
-  const [pendingAction, setPendingAction] = useState<{ type: 'edit'|'delete'|'add', memory?: Memory } | null>(null);
+  const [pendingAction, setPendingAction] = useState<{ type: 'edit'|'delete'|'add'|'profile', memory?: Memory } | null>(null);
+
+  const attemptProfile = () => {
+    if (isAddLocked) {
+      setPendingAction({ type: 'profile' });
+      setScreen('passcode_verify');
+    } else {
+      setScreen('profile');
+    }
+  };
 
   const attemptEdit = (m: Memory) => {
     if (isAddLocked) {
@@ -105,6 +114,8 @@ export default function App() {
       setScreen('edit');
     } else if (pendingAction?.type === 'delete' && pendingAction.memory) {
       executeDelete(pendingAction.memory.id);
+    } else if (pendingAction?.type === 'profile') {
+      setScreen('profile');
     } else {
       setScreen('add');
     }
@@ -148,7 +159,7 @@ export default function App() {
             animate={{ opacity: 1 }}
             className="pb-32"
           >
-            <TopBar title={t.ourStory} avatarUrl={profile?.avatarUrl} onClickAvatar={() => setScreen('profile')} />
+            <TopBar title={t.ourStory} avatarUrl={profile?.avatarUrl} onClickAvatar={attemptProfile} />
             
             {screen === 'timeline' && (
               <TimelineScreen 
