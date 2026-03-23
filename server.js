@@ -268,6 +268,74 @@ app.delete('/api/memories/:id', async (req, res) => {
   res.status(204).send();
 });
 
+// Async storage migration tool
+const migrateLocalFilesToS3 = async () => {
+  if (!s3Client || !s3PublicDomain) return;
+
+  try {
+    const data = readData();
+    let updated = false;
+
+    // Migrate memories
+    for (const memory of data.memories) {
+      if (!memory.images) continue;
+
+      for (let i = 0; i < memory.images.length; i++) {
+        const url = memory.images[i];
+        if (url.startsWith('/uploads/')) {
+          const fileName = url.replace('/uploads/', '');
+          const filePath = path.join(UPLOADS_DIR, fileName);
+
+          if (fs.existsSync(filePath)) {
+            console.log(`🚀 Automated Migration: Pushing [${fileName}] to S3...`);
+            const fileStream = fs.createReadStream(filePath);
+            const s3Key = `media/${fileName}`;
+            const ext = path.extname(fileName).toLowerCase();
+            const mimeTypes = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.gif': 'image/gif', '.webp': 'image/webp', '.mp4': 'video/mp4', '.webm': 'video/webm' };
+            const contentType = mimeTypes[ext] || 'application/octet-stream';
+
+            await s3Client.send(new PutObjectCommand({ Bucket: process.env.S3_BUCKET_NAME, Key: s3Key, Body: fileStream, ContentType: contentType }));
+            
+            memory.images[i] = `${s3PublicDomain}/${s3Key}`;
+            updated = true;
+            fs.unlinkSync(filePath);
+          }
+        }
+      }
+    }
+
+    // Migrate profile avatar
+    if (data.profile?.avatarUrl?.startsWith('/uploads/')) {
+      const url = data.profile.avatarUrl;
+      const fileName = url.replace('/uploads/', '');
+      const filePath = path.join(UPLOADS_DIR, fileName);
+
+      if (fs.existsSync(filePath)) {
+        console.log(`🚀 Automated Migration: Pushing avatar [${fileName}] to S3...`);
+        const fileStream = fs.createReadStream(filePath);
+        const s3Key = `media/${fileName}`;
+        const ext = path.extname(fileName).toLowerCase();
+        const mimeTypes = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.gif': 'image/gif', '.webp': 'image/webp' };
+        
+        await s3Client.send(new PutObjectCommand({ Bucket: process.env.S3_BUCKET_NAME, Key: s3Key, Body: fileStream, ContentType: mimeTypes[ext] || 'application/octet-stream' }));
+        data.profile.avatarUrl = `${s3PublicDomain}/${s3Key}`;
+        updated = true;
+        fs.unlinkSync(filePath);
+      }
+    }
+
+    if (updated) {
+      writeData(data);
+      console.log('✅ Local to S3 Cloud Migration Completed.');
+    }
+  } catch (error) {
+    console.error('Migration failed:', error);
+  }
+};
+
+// Trigger migration gracefully in background
+setTimeout(migrateLocalFilesToS3, 1000);
+
 // Serve React SPA fallback
 app.get('*', (req, res) => {
   const indexPath = path.join(DIST_DIR, 'index.html');
