@@ -1,12 +1,33 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { ChevronRight, X } from 'lucide-react';
+import { ChevronRight, ChevronLeft, X } from 'lucide-react';
 import { Memory } from '../types';
 
 export const AlbumScreen = ({ memories, t }: { memories: Memory[], t: any }) => {
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   
   const allImages = memories.flatMap(m => m.images.map(img => ({ url: img, title: m.title, date: m.date })));
+  const minSwipeDistance = 50;
+
+  useEffect(() => {
+    if (selectedIndex === null) return;
+    
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        if (selectedIndex > 0) setSelectedIndex(selectedIndex - 1);
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        if (selectedIndex < allImages.length - 1) setSelectedIndex(selectedIndex + 1);
+      } else if (e.key === 'Escape') {
+        setSelectedIndex(null);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedIndex, allImages.length]);
 
   return (
     <main className="pt-24 pb-32 px-6 max-w-5xl mx-auto animate-fade-in">
@@ -21,7 +42,7 @@ export const AlbumScreen = ({ memories, t }: { memories: Memory[], t: any }) => 
             key={idx}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
-            onClick={() => setSelectedImage(img.url)}
+            onClick={() => setSelectedIndex(idx)}
             className="aspect-square rounded-xl overflow-hidden bg-surface-container cursor-pointer shadow-sm group"
           >
             {img.url.match(/\.(mp4|webm|ogg)$/i) ? (
@@ -45,41 +66,83 @@ export const AlbumScreen = ({ memories, t }: { memories: Memory[], t: any }) => 
         </button>
       </div>
 
-      <AnimatePresence>
-        {selectedImage && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={() => setSelectedImage(null)}
-            className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-sm flex items-center justify-center p-4"
-          >
+      {typeof document !== 'undefined' && createPortal(
+        <AnimatePresence>
+          {selectedIndex !== null && allImages[selectedIndex] && (
             <motion.div 
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="relative max-w-4xl w-full max-h-[80vh] flex items-center justify-center"
-              onClick={(e) => e.stopPropagation()}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setSelectedIndex(null)}
+              className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-[2px] flex items-center justify-center p-0 cursor-default"
             >
-              {selectedImage.match(/\.(mp4|webm|ogg)$/i) ? (
-                <video src={selectedImage} controls playsInline className="max-w-full max-h-full object-contain rounded-lg shadow-2xl" />
-              ) : (
-                <img 
-                  src={selectedImage} 
-                  alt="Enlarged" 
-                  className="max-w-full max-h-full object-contain rounded-lg shadow-2xl" 
-                />
-              )}
               <button 
-                onClick={() => setSelectedImage(null)}
-                className="absolute -top-12 right-0 text-white hover:text-primary transition-colors"
+                onClick={(e) => { e.stopPropagation(); setSelectedIndex(null); }}
+                className="absolute top-4 right-4 text-white/50 hover:text-white transition-colors p-2 z-[110] bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-full"
               >
-                <X size={32} />
+                <X size={28} />
               </button>
+              
+              {selectedIndex > 0 && (
+                <button 
+                  onClick={(e) => { e.stopPropagation(); setSelectedIndex(selectedIndex - 1); }}
+                  className="absolute left-2 md:left-8 top-1/2 -translate-y-1/2 text-white/50 hover:text-white transition-colors p-2 md:p-3 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-full z-[110]"
+                >
+                  <ChevronLeft size={36} />
+                </button>
+              )}
+
+              {selectedIndex < allImages.length - 1 && (
+                <button 
+                  onClick={(e) => { e.stopPropagation(); setSelectedIndex(selectedIndex + 1); }}
+                  className="absolute right-2 md:right-8 top-1/2 -translate-y-1/2 text-white/50 hover:text-white transition-colors p-2 md:p-3 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-full z-[110]"
+                >
+                  <ChevronRight size={36} />
+                </button>
+              )}
+
+              <div 
+                className="relative w-full h-full flex items-center justify-center p-4 md:p-12 overflow-hidden"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={selectedIndex}
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    transition={{ duration: 0.15, ease: "easeInOut" }}
+                    drag="x"
+                    dragConstraints={{ left: 0, right: 0 }}
+                    dragElastic={0.8}
+                    onDragEnd={(e, { offset }) => {
+                      const swipe = offset.x;
+                      if (swipe < -minSwipeDistance && selectedIndex < allImages.length - 1) {
+                        setSelectedIndex(selectedIndex + 1);
+                      } else if (swipe > minSwipeDistance && selectedIndex > 0) {
+                        setSelectedIndex(selectedIndex - 1);
+                      }
+                    }}
+                    className="w-full h-full flex items-center justify-center cursor-grab active:cursor-grabbing hover:cursor-grab touch-none"
+                  >
+                    {allImages[selectedIndex].url.match(/\.(mp4|webm|ogg)$/i) ? (
+                      <video src={allImages[selectedIndex].url} controls playsInline className="w-full h-full object-contain rounded-lg shadow-[0_0_40px_rgba(0,0,0,0.5)]" />
+                    ) : (
+                      <img 
+                        src={allImages[selectedIndex].url} 
+                        alt="Enlarged" 
+                        className="w-full h-full object-contain rounded-lg shadow-[0_0_40px_rgba(0,0,0,0.5)] select-none pointer-events-none" 
+                        draggable={false}
+                      />
+                    )}
+                  </motion.div>
+                </AnimatePresence>
+              </div>
             </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          )}
+        </AnimatePresence>,
+        document.body
+      )}
     </main>
   );
 };
