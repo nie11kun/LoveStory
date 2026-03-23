@@ -1,4 +1,4 @@
-export type Screen = 'lock' | 'timeline' | 'add' | 'album' | 'settings';
+export type Screen = 'lock' | 'timeline' | 'add' | 'album' | 'settings' | 'detail' | 'edit' | 'passcode_verify' | 'profile';
 
 export interface Memory {
   id: string;
@@ -7,7 +7,6 @@ export interface Memory {
   description: string;
   images: string[];
   tags: string[];
-  category: 'Travel' | 'Daily' | 'Wedding' | 'Anniversary';
   daysAgo: number;
 }
 
@@ -16,4 +15,5 @@ export interface UserProfile {
   partnerName: string;
   anniversaryDate: string;
   avatarUrl: string;
+  customTags?: string[];
 }

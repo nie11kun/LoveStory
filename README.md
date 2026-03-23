@@ -1,20 +1,105 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# LoveStory ❤️
 
-# Run and deploy your AI Studio app
+**LoveStory** 是一个专为情侣设计的私密爱情时光机与数字纪念册。
+它采用极其轻量的前后端分离架构，但通过巧妙的工程设计，最终能合并为单一服务端进程部署。所有的珍贵回忆、照片视频、纪念日与专属标签，均被安全、结构化地永久保存在你自己的服务器上。
 
-This contains everything you need to run your app locally.
+---
 
-View your app in AI Studio: https://ai.studio/apps/869ceb28-5bb9-4755-a6f1-36df621e1cfa
+## 🌟 核心特性
 
-## Run Locally
+- **🔒 私密双重锁**
+  - **访问锁**：进入系统必须校验主密码（`MAIN_PASSCODE`）。
+  - **写入锁**：添加、编辑或删除记忆时需要额外的安全层（`ADD_PASSCODE`）。
+  - 超时保护：密码状态自动维持，超时需重新验证。
+- **📖 时光轴与相册瀑布流**
+  - 精美的双语化（中/英）响应式界面，适配桌面端与移动设备。
+  - 支持多图轮播、全屏媒体预览（支持网络链接或本地无损上传）。
+  - 基于录入日期的自动倒计时/已过天数结算。
+- **🏷️ 全动态的精细操控**
+  - 支持建立无上限的自定义专属标签（如：旅行、日常、纪念日、争吵、和解...）。
+  - 动态个人资料板（双方昵称、专属主页头像及共同纪念日维护）。
+- **🛠️ 极简的数据模型**
+  - **零数据库依赖**：所有数据实时无感落盘至本地 `data.json` 以及 `uploads/` 文件夹。
+  - 数据迁移、备份或在服务器之间迁移仅仅只需要复制这两个文件。
 
-**Prerequisites:**  Node.js
+---
 
+## 🚀 启动与部署
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+### 1. 本地开发 (Development)
+LoveStory 使用 Vite (React) 提供极致的前端体验，后台依托 Node.js (Express)：
+
+```bash
+# 安装所有的前端和后端依赖
+npm install
+
+# 复制环境变量模板并根据需要修改
+cp .env.example .env
+
+# 拉起双端热重载服务（前端监听 3000，后端监听 3001）
+npm run dev
+```
+
+### 2. 构建与生产部署 (Production)
+本程序的极简之道在于——**一套代码可以在同一个端口原生兼顾静态页面和 API 接口**，极其适合放入服务器（VPS、云服务器或轻量应用服务器）。
+
+```bash
+# 1. 在本地或 CI 平台执行编译，这会将 React 组件打包成静态文件进入 /dist 目录
+npm run build
+
+# 2. 将整个项目目录（只需包含 dist, server.js, package.json 以及 .env，不带 node_modules）上传至服务器
+
+# 3. 在服务器端安装生产依赖
+npm install --production
+
+# 4. 运行服务（支持所有的 SPA 路由回退，由后端接管）
+node server.js
+# 建议使用 pm2 守护进程： pm2 start server.js --name "LoveStory"
+```
+
+---
+
+## ⚙️ 环境配置 (.env)
+
+项目目录下包含 `.env` 环境配置文件，核心功能均可直接在此掌控，修改后需重启 Node 服务。
+
+```env
+# Node 后端 API 及生产环境的前端监听端口
+PORT=3001
+
+# 本地开发时，Vite 的前端监听端口
+VITE_PORT=3000
+
+# 主访问密码（默认：4641）
+VITE_MAIN_PASSCODE=4641
+
+# 编辑/添加数据的写权限密码（默认：1234）
+VITE_ADD_PASSCODE=1234
+
+# 密码过期免登时间，默认 86400000 毫秒（24小时）
+VITE_UNLOCK_EXPIRY_MS=86400000
+```
+
+---
+
+## 📂 目录与架构
+
+```text
+LoveStory/
+├── data.json              # 核心数据库文件（自动生成，持久化所有内容及用户设置）
+├── uploads/               # 所上传的媒体图片/视频附件
+├── server.js              # Node.js 后端主服务（API 响应、文件处理、静态托管）
+├── src/                   # React 源码域
+│   ├── App.tsx            # 全局路由级协调器
+│   ├── components/        # UI 基础积木 (TopNav, Passcode, Keypad, etc.)
+│   ├── screens/           # 全尺寸的业务页面 (Timeline, Album, Profile, Settings)
+│   ├── utils/             # 高级工具集 (i18n 多语言映射, Constants)
+│   ├── types.ts           # TypeScript 全局数据模型
+│   └── index.css          # Tailwind 基础注入点及全局原生覆盖
+```
+
+## 💖 寄语
+
+> *"每一个爱情故事都很美，但我们的故事是我最喜欢的。"*
+
+用现代技术留住点滴。无需第三方的订阅费，不用担心隐私审核或数据丢失。只要这台服务器还在，你们的故事就永远存在于赛博空间中。
