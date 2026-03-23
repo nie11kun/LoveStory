@@ -136,7 +136,7 @@ export const MemoryFormScreen = ({ t, onSave, onNavigate, initialMemory, profile
               ) : (
                 <img src={url} alt="Preview" className="w-full h-full object-cover" />
               )}
-              <button type="button" onClick={() => removeNetworkUrl(i)} className="absolute top-2 right-2 bg-black/50 text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity"><X size={14}/></button>
+              <button type="button" onClick={() => removeNetworkUrl(i)} className="absolute top-2 right-2 bg-black/50 text-white rounded-full p-1.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"><X size={14}/></button>
             </div>
           ))}
           {localFiles.map((file, i) => (
@@ -146,7 +146,7 @@ export const MemoryFormScreen = ({ t, onSave, onNavigate, initialMemory, profile
               ) : (
                 <img src={URL.createObjectURL(file)} alt="Preview" className="w-full h-full object-cover" />
               )}
-              <button type="button" onClick={() => removeLocalFile(i)} className="absolute top-2 right-2 bg-black/50 text-white rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-opacity"><X size={14}/></button>
+              <button type="button" onClick={() => removeLocalFile(i)} className="absolute top-2 right-2 bg-black/50 text-white rounded-full p-1.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"><X size={14}/></button>
             </div>
           ))}
 
