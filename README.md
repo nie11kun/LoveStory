@@ -72,7 +72,35 @@ node server.js
 # 建议使用 pm2 守护进程： pm2 start server.js --name "LoveStory"
 ```
 
-### 3. Nginx 反向代理配置 (可选)
+### 3. Systemd 守护进程守护 (推荐)
+如果你使用的是主流的 Linux 服务器（Ubuntu/CentOS/Debian），推荐使用原生 `systemd` 将 LoveStory 注册为开机自启的后台服务。
+项目根目录已附带 `lovestory.service` 模板，请按需修改其中的**路径**后放入系统目录：
+
+```bash
+# 首先，查询当前环境下 Node.js 的绝对路径
+which node
+# 输出结果形如：/usr/bin/node 或者 /home/user/.nvm/versions/node/.../bin/node
+# 此时你需要把 lovestory.service 文件里的 ExecStart 替换为这行真实的输出路径。
+
+# 1. 复制服务模版到 systemd 目录
+sudo cp lovestory.service /etc/systemd/system/
+
+# 2. 编辑绝对路径 (WorkingDirectory 和 ExecStart 必须为你服务器的实际路径)
+sudo nano /etc/systemd/system/lovestory.service
+
+# 3. 重载 systemd 服务配置
+sudo systemctl daemon-reload
+
+# 4. 启动并设置开机自启
+sudo systemctl start lovestory
+sudo systemctl enable lovestory
+
+# 5. 查看运行状态或日志
+sudo systemctl status lovestory
+journalctl -u lovestory -f
+```
+
+### 4. Nginx 反向代理配置 (可选)
 如果你的服务器上使用 Nginx 作为 Web 服务器，并且你希望通过子路径（例如 `https://yourdomain.com/lovestory/`）或者主域名直接访问它，可以通过以下规则将外部流量桥接到本地的 `3001` 端口：
 
 **作为主域名根目录直接访问 (`/`)：**
