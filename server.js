@@ -291,7 +291,7 @@ const migrateLocalFilesToS3 = async () => {
             const fileStream = fs.createReadStream(filePath);
             const s3Key = `media/${fileName}`;
             const ext = path.extname(fileName).toLowerCase();
-            const mimeTypes = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.gif': 'image/gif', '.webp': 'image/webp', '.mp4': 'video/mp4', '.webm': 'video/webm' };
+            const mimeTypes = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.gif': 'image/gif', '.webp': 'image/webp', '.mp4': 'video/mp4', '.webm': 'video/webm', '.mov': 'video/quicktime', '.m4v': 'video/x-m4v' };
             const contentType = mimeTypes[ext] || 'application/octet-stream';
 
             await s3Client.send(new PutObjectCommand({ Bucket: process.env.S3_BUCKET_NAME, Key: s3Key, Body: fileStream, ContentType: contentType }));

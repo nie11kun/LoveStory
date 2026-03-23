@@ -131,8 +131,8 @@ export const MemoryFormScreen = ({ t, onSave, onNavigate, initialMemory, profile
         <div className="grid grid-cols-3 gap-4">
           {networkUrls.map((url, i) => (
             <div key={'net'+i} className="aspect-square bg-surface-container rounded-xl overflow-hidden shadow-sm relative group">
-              {url.match(/\.(mp4|webm|ogg)$/i) ? (
-                <video src={url} className="w-full h-full object-cover" />
+              {url.match(/\.(mp4|webm|ogg|mov|m4v)$/i) ? (
+                <video src={`${url}#t=0.1`} preload="metadata" playsInline controls className="w-full h-full object-contain" onClick={(e) => e.stopPropagation()} />
               ) : (
                 <img src={url} alt="Preview" className="w-full h-full object-cover" />
               )}
@@ -142,7 +142,7 @@ export const MemoryFormScreen = ({ t, onSave, onNavigate, initialMemory, profile
           {localFiles.map((file, i) => (
             <div key={'loc'+i} className="aspect-square bg-surface-container rounded-xl overflow-hidden shadow-sm relative group">
               {file.type.startsWith('video/') ? (
-                <video src={URL.createObjectURL(file)} className="w-full h-full object-cover" />
+                <video src={`${URL.createObjectURL(file)}#t=0.1`} preload="metadata" playsInline controls className="w-full h-full object-contain" onClick={(e) => e.stopPropagation()} />
               ) : (
                 <img src={URL.createObjectURL(file)} alt="Preview" className="w-full h-full object-cover" />
               )}

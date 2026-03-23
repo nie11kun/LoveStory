@@ -45,14 +45,14 @@ export const AlbumScreen = ({ memories, t }: { memories: Memory[], t: any }) => 
             onClick={() => setSelectedIndex(idx)}
             className="aspect-square rounded-xl overflow-hidden bg-black/5 relative cursor-pointer shadow-sm group"
           >
-            {!img.url.match(/\.(mp4|webm|ogg)$/i) && (
+            {!img.url.match(/\.(mp4|webm|ogg|mov|m4v)$/i) && (
               <div className="absolute inset-0 overflow-hidden w-full h-full pointer-events-none select-none z-0">
                 <img src={img.url} className="absolute inset-0 w-full h-full object-cover opacity-40 blur-xl scale-125 pointer-events-none" alt="" />
               </div>
             )}
             
-            {img.url.match(/\.(mp4|webm|ogg)$/i) ? (
-              <video src={img.url} className="relative z-10 w-full h-full object-contain" controls playsInline />
+            {img.url.match(/\.(mp4|webm|ogg|mov|m4v)$/i) ? (
+              <video src={`${img.url}#t=0.1`} preload="metadata" playsInline controls className="relative z-10 w-full h-full object-contain" onClick={(e) => e.stopPropagation()} />
             ) : (
               <img 
                 src={img.url} 
@@ -131,7 +131,7 @@ export const AlbumScreen = ({ memories, t }: { memories: Memory[], t: any }) => 
                     }}
                     className="w-full h-full flex items-center justify-center cursor-grab active:cursor-grabbing hover:cursor-grab touch-none"
                   >
-                    {allImages[selectedIndex].url.match(/\.(mp4|webm|ogg)$/i) ? (
+                    {allImages[selectedIndex].url.match(/\.(mp4|webm|ogg|mov|m4v)$/i) ? (
                       <video src={allImages[selectedIndex].url} controls playsInline className="w-full h-full object-contain rounded-lg shadow-[0_0_40px_rgba(0,0,0,0.5)]" />
                     ) : (
                       <img 

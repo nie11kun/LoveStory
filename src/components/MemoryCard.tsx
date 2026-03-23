@@ -65,23 +65,23 @@ export const MemoryCard = ({ memory, index, t, formatDate, onClick }: { memory: 
               {memory.images.map((img: string, i: number) => (
                 <div 
                   key={i} 
-                  className="w-full h-full flex-none snap-center relative cursor-pointer overflow-hidden bg-black/5"
+                  className="w-full h-full flex-none snap-center relative cursor-pointer overflow-hidden bg-black/5 transform-gpu"
                   onClick={(e) => { e.stopPropagation(); setSelectedIndex(i); }}
                 >
                   {/* Blurred Background Layer for elegant letterboxing (isolated to prevent Safari layout bleed) */}
-                  {!img.match(/\.(mp4|webm|ogg)$/i) && (
-                    <div className="absolute inset-0 overflow-hidden w-full h-full pointer-events-none select-none">
+                  {!img.match(/\.(mp4|webm|ogg|mov|m4v)$/i) && (
+                    <div className="absolute inset-0 overflow-hidden w-full h-full pointer-events-none select-none z-0 transform-gpu">
                       <img src={img} className="absolute inset-0 w-full h-full object-cover opacity-40 blur-xl scale-125 pointer-events-none" alt="" />
                     </div>
                   )}
                   
-                  {img.match(/\.(mp4|webm|ogg)$/i) ? (
-                    <video src={img} className="relative z-10 w-full h-full object-contain" controls playsInline />
+                  {img.match(/\.(mp4|webm|ogg|mov|m4v)$/i) ? (
+                    <video src={`${img}#t=0.1`} preload="metadata" playsInline controls className="relative z-10 w-full h-full object-contain transform-gpu" onClick={(e) => e.stopPropagation()} />
                   ) : (
                     <img 
                       src={img} 
                       alt={`${memory.title} ${i+1}`} 
-                      className="relative z-10 w-full h-full object-contain group-hover:scale-105 transition-transform duration-700" 
+                      className="relative z-10 w-full h-full object-contain group-hover:scale-105 transition-transform duration-700 transform-gpu" 
                     />
                   )}
                 </div>
@@ -175,7 +175,7 @@ export const MemoryCard = ({ memory, index, t, formatDate, onClick }: { memory: 
                     }}
                     className="w-full h-full flex items-center justify-center cursor-grab active:cursor-grabbing hover:cursor-grab touch-none"
                   >
-                    {memory.images[selectedIndex].match(/\.(mp4|webm|ogg)$/i) ? (
+                    {memory.images[selectedIndex].match(/\.(mp4|webm|ogg|mov|m4v)$/i) ? (
                       <video src={memory.images[selectedIndex]} controls playsInline className="w-full h-full object-contain rounded-lg shadow-[0_0_40px_rgba(0,0,0,0.5)]" />
                     ) : (
                       <img 
