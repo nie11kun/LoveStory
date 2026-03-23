@@ -4,6 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import multer from 'multer';
 import dotenv from 'dotenv';
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 
 dotenv.config();
 
@@ -23,6 +24,54 @@ const PORT = process.env.PORT || 3001;
 app.use(express.json());
 app.use('/uploads', express.static(UPLOADS_DIR));
 app.use(express.static(DIST_DIR));
+
+// Setup External Cloud Storage
+let s3Client = null;
+if (process.env.S3_ENDPOINT && process.env.S3_ACCESS_KEY_ID && process.env.S3_SECRET_ACCESS_KEY && process.env.S3_BUCKET_NAME) {
+  s3Client = new S3Client({
+    region: process.env.S3_REGION || 'auto',
+    endpoint: process.env.S3_ENDPOINT,
+    credentials: {
+      accessKeyId: process.env.S3_ACCESS_KEY_ID,
+      secretAccessKey: process.env.S3_SECRET_ACCESS_KEY
+    }
+  });
+  console.log('✅ Cloudflare R2 / S3 Storage Enabled');
+}
+
+let s3PublicDomain = process.env.S3_PUBLIC_DOMAIN?.replace(/\/$/, "");
+if (s3PublicDomain && !/^https?:\/\//i.test(s3PublicDomain)) {
+  s3PublicDomain = `https://${s3PublicDomain}`;
+}
+const imgurClientId = process.env.IMGUR_CLIENT_ID;
+if (imgurClientId) {
+  console.log('⚠️ Imgur API Storage Enabled (Publicly Accessible)');
+}
+
+// Helper to physically delete media from storage
+const deleteMediaByUrl = async (url) => {
+  try {
+    if (s3Client && s3PublicDomain && url.startsWith(s3PublicDomain)) {
+      // It's an S3/R2 object
+      const key = url.replace(`${s3PublicDomain}/`, '');
+      await s3Client.send(new DeleteObjectCommand({
+        Bucket: process.env.S3_BUCKET_NAME,
+        Key: key
+      }));
+      console.log(`🗑️ Deleted from S3: ${key}`);
+    } else if (url.startsWith('/uploads/')) {
+      // It's a local file
+      const fileName = url.replace('/uploads/', '');
+      const filePath = path.join(UPLOADS_DIR, fileName);
+      if (fs.existsSync(filePath)) {
+        fs.unlinkSync(filePath);
+        console.log(`🗑️ Deleted locally: ${fileName}`);
+      }
+    }
+  } catch (error) {
+    console.error(`Failed to delete media ${url}:`, error);
+  }
+};
 
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -87,12 +136,64 @@ app.get('/api/memories', (req, res) => {
   res.json(data.memories);
 });
 
-app.post('/api/upload', upload.array('files', 10), (req, res) => {
+app.post('/api/upload', upload.array('files', 10), async (req, res) => {
   if (!req.files || req.files.length === 0) {
     return res.status(400).json({ error: 'No files uploaded.' });
   }
-  const fileUrls = req.files.map(file => `/uploads/${file.filename}`);
-  res.json({ urls: fileUrls });
+
+  try {
+    const urls = [];
+
+    for (const file of req.files) {
+      if (s3Client && s3PublicDomain) {
+        // Option A: Cloudflare R2 / AWS S3
+        const fileStream = fs.createReadStream(file.path);
+        const fileName = `media/${file.filename}`;
+        
+        await s3Client.send(new PutObjectCommand({
+          Bucket: process.env.S3_BUCKET_NAME,
+          Key: fileName,
+          Body: fileStream,
+          ContentType: file.mimetype
+        }));
+        
+        fs.unlinkSync(file.path); // Safely remove local temp file
+        urls.push(`${s3PublicDomain}/${fileName}`);
+      } else if (imgurClientId) {
+        // Option B: Imgur API
+        const fileData = fs.readFileSync(file.path);
+        const base64Image = fileData.toString('base64');
+        const imgurForm = new URLSearchParams();
+        imgurForm.append('image', base64Image);
+        imgurForm.append('type', 'base64');
+
+        const response = await fetch('https://api.imgur.com/3/image', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Client-ID ${imgurClientId}`
+          },
+          body: imgurForm
+        });
+        
+        const data = await response.json();
+        fs.unlinkSync(file.path);
+        
+        if (data.success) {
+          urls.push(data.data.link);
+        } else {
+          throw new Error('Imgur upload failed: ' + JSON.stringify(data));
+        }
+      } else {
+        // Default C: Local Disk Storage
+        urls.push(`/uploads/${file.filename}`);
+      }
+    }
+
+    res.json({ urls });
+  } catch (error) {
+    console.error('Upload Error:', error);
+    res.status(500).json({ error: 'Failed to process upload.' });
+  }
 });
 
 app.post('/api/memories', (req, res) => {
@@ -119,13 +220,23 @@ app.post('/api/memories', (req, res) => {
   res.status(201).json(newMemory);
 });
 
-app.put('/api/memories/:id', (req, res) => {
+app.put('/api/memories/:id', async (req, res) => {
   const data = readData();
   const index = data.memories.findIndex(m => m.id === req.params.id);
   if (index === -1) return res.status(404).json({ error: 'Not found' });
   
-  const updatedMemory = { ...data.memories[index], ...req.body, id: req.params.id };
+  const oldMemory = data.memories[index];
+  const updatedMemory = { ...oldMemory, ...req.body, id: req.params.id };
   
+  // Garbage collect images that were removed during this edit
+  const oldImages = oldMemory.images || [];
+  const newImages = updatedMemory.images || [];
+  const orphanedImages = oldImages.filter(img => !newImages.includes(img));
+  
+  for (const mediaUrl of orphanedImages) {
+    await deleteMediaByUrl(mediaUrl);
+  }
+
   if (updatedMemory.date) {
     const inputDate = new Date(updatedMemory.date);
     const today = new Date();
@@ -138,11 +249,20 @@ app.put('/api/memories/:id', (req, res) => {
   res.json(updatedMemory);
 });
 
-app.delete('/api/memories/:id', (req, res) => {
+app.delete('/api/memories/:id', async (req, res) => {
   const data = readData();
   const index = data.memories.findIndex(m => m.id === req.params.id);
   if (index === -1) return res.status(404).json({ error: 'Not found' });
   
+  const memoryToDelete = data.memories[index];
+  
+  // Garbage collect all associated images
+  if (memoryToDelete.images && memoryToDelete.images.length > 0) {
+    for (const mediaUrl of memoryToDelete.images) {
+      await deleteMediaByUrl(mediaUrl);
+    }
+  }
+
   data.memories.splice(index, 1);
   writeData(data);
   res.status(204).send();

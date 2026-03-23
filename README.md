@@ -165,6 +165,29 @@ VITE_UNLOCK_EXPIRY_MS=86400000
 
 ---
 
+## ☁️ 云对象存储扩展 (避免占用本地磁盘)
+
+系统的 `/api/upload` 接口原生支持**无缝推流至兼容 S3 协议的云存储**（例如免费的 **Cloudflare R2**、AWS S3、腾讯云 COS 等），或者上传至 **Imgur** 免费图床。
+只要在 `.env` 文件中配置了对应的参数，系统会自动剥离对本地 `uploads/` 文件夹的依赖，实现零本地占用！
+
+> **🔒 隐私警告**：强烈推荐使用 **Cloudflare R2** 等 S3 兼容服务，因为它是私有的，且每月有免费 10GB 额度和无限下载流量。**坚决不推荐使用 Imgur** 保存情侣隐私相片，因为 Imgur 上传均是公网可见且受其审查。
+
+### 配置 Cloudflare R2 (推荐方案)的 `.env` 示例：
+```env
+# 你的 R2 Endpoint
+S3_ENDPOINT=https://xxxxxx.r2.cloudflarestorage.com
+S3_REGION=auto
+S3_ACCESS_KEY_ID=你的_R2_AccessKey
+S3_SECRET_ACCESS_KEY=你的_R2_SecretKey
+S3_BUCKET_NAME=lovestory-media
+
+# 提供对外的可访问域名 (支持绑定自己的域名在 CF 控制台)
+S3_PUBLIC_DOMAIN=https://pub-xxxxxx.r2.dev
+```
+*重启 Node.js 服务后生效。所有的新媒体将直接由服务端中转流片到 R2 桶内并返回 CF CDN 链接。*
+
+---
+
 ## 📂 目录与架构
 
 ```text
