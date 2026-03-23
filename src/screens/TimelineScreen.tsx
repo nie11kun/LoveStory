@@ -3,9 +3,12 @@ import { motion } from 'motion/react';
 import { MemoryCard } from '../components/MemoryCard';
 import { Memory } from '../types';
 import { Language } from '../utils/i18n';
+import { ChevronRight } from 'lucide-react';
 
 export const TimelineScreen = ({ memories, t, lang, onSelectMemory }: { memories: Memory[], t: any, lang: Language, onSelectMemory: (m: Memory) => void }) => {
+  const [displayCount, setDisplayCount] = React.useState(10);
   const sortedMemories = [...memories].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const displayedMemories = sortedMemories.slice(0, displayCount);
 
   const formatDate = (dateStr: string) => {
     if (lang === 'zh') {
@@ -24,7 +27,7 @@ export const TimelineScreen = ({ memories, t, lang, onSelectMemory }: { memories
       </section>
 
       <div className="relative space-y-16">
-        {sortedMemories.map((memory, index) => (
+        {displayedMemories.map((memory, index) => (
           <motion.article 
             key={memory.id}
             initial={{ opacity: 0, x: index % 2 === 0 ? -20 : 20 }}
@@ -36,6 +39,19 @@ export const TimelineScreen = ({ memories, t, lang, onSelectMemory }: { memories
           </motion.article>
         ))}
       </div>
+
+      {displayCount < sortedMemories.length && (
+        <div className="mt-20 text-center flex flex-col items-center">
+          <div className="w-12 h-[1px] bg-outline-variant mb-6"></div>
+          <button 
+            onClick={() => setDisplayCount(prev => prev + 10)}
+            className="font-body text-xs uppercase tracking-widest text-secondary hover:text-primary transition-colors flex items-center gap-2"
+          >
+            {t.loadMore}
+            <ChevronRight size={14} className="rotate-90" />
+          </button>
+        </div>
+      )}
     </main>
   );
 };

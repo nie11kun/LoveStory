@@ -6,8 +6,10 @@ import { Memory } from '../types';
 
 export const AlbumScreen = ({ memories, t }: { memories: Memory[], t: any }) => {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [displayCount, setDisplayCount] = useState(24);
   
   const allImages = memories.flatMap(m => m.images.map(img => ({ url: img, title: m.title, date: m.date })));
+  const displayedImages = allImages.slice(0, displayCount);
   const minSwipeDistance = 50;
 
   useEffect(() => {
@@ -37,7 +39,7 @@ export const AlbumScreen = ({ memories, t }: { memories: Memory[], t: any }) => 
       </section>
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        {allImages.map((img, idx) => (
+        {displayedImages.map((img, idx) => (
           <motion.div 
             key={idx}
             whileHover={{ scale: 1.02 }}
@@ -64,13 +66,18 @@ export const AlbumScreen = ({ memories, t }: { memories: Memory[], t: any }) => 
         ))}
       </div>
 
-      <div className="mt-20 text-center flex flex-col items-center">
-        <div className="w-12 h-[1px] bg-outline-variant mb-6"></div>
-        <button className="font-body text-xs uppercase tracking-widest text-secondary hover:text-primary transition-colors flex items-center gap-2">
-          {t.loadMore}
-          <ChevronRight size={14} className="rotate-90" />
-        </button>
-      </div>
+      {displayCount < allImages.length && (
+        <div className="mt-20 text-center flex flex-col items-center">
+          <div className="w-12 h-[1px] bg-outline-variant mb-6"></div>
+          <button 
+            onClick={() => setDisplayCount(prev => prev + 24)}
+            className="font-body text-xs uppercase tracking-widest text-secondary hover:text-primary transition-colors flex items-center gap-2"
+          >
+            {t.loadMore}
+            <ChevronRight size={14} className="rotate-90" />
+          </button>
+        </div>
+      )}
 
       {typeof document !== 'undefined' && createPortal(
         <AnimatePresence>
