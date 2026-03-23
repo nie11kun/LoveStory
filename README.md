@@ -70,11 +70,11 @@ PORT=3001
 # 本地开发时，Vite 的前端监听端口
 VITE_PORT=3000
 
-# 主访问密码（默认：4641）
-VITE_MAIN_PASSCODE=4641
+# 主访问密码（默认：1111）
+VITE_MAIN_PASSCODE=1111
 
-# 编辑/添加数据的写权限密码（默认：1234）
-VITE_ADD_PASSCODE=1234
+# 编辑/添加数据的写权限密码（默认：2222）
+VITE_ADD_PASSCODE=2222
 
 # 密码过期免登时间，默认 86400000 毫秒（24小时）
 VITE_UNLOCK_EXPIRY_MS=86400000
