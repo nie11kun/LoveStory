@@ -42,8 +42,8 @@ export const PasscodeScreen = ({
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-8 bg-background relative overflow-hidden">
-      <div className="absolute -top-24 -left-24 w-64 h-64 bg-primary/5 rounded-full blur-3xl"></div>
-      <div className="absolute -bottom-24 -right-24 w-80 h-80 bg-secondary/5 rounded-full blur-3xl"></div>
+      <div className="absolute -top-24 -left-24 w-64 h-64 bg-primary/5 rounded-full blur-3xl pointer-events-none"></div>
+      <div className="absolute -bottom-24 -right-24 w-80 h-80 bg-secondary/5 rounded-full blur-3xl pointer-events-none"></div>
 
       {onCancel && (
         <button 
