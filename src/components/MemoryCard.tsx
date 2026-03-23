@@ -65,23 +65,23 @@ export const MemoryCard = ({ memory, index, t, formatDate, onClick }: { memory: 
               {memory.images.map((img: string, i: number) => (
                 <div 
                   key={i} 
-                  className="w-full h-full flex-none snap-center relative cursor-pointer overflow-hidden bg-black/5 transform-gpu"
+                  className="w-full h-full flex-none snap-center relative cursor-pointer overflow-hidden bg-black/5 isolate"
                   onClick={(e) => { e.stopPropagation(); setSelectedIndex(i); }}
                 >
                   {/* Blurred Background Layer for elegant letterboxing (isolated to prevent Safari layout bleed) */}
                   {!img.match(/\.(mp4|webm|ogg|mov|m4v)$/i) && (
-                    <div className="absolute inset-0 overflow-hidden w-full h-full pointer-events-none select-none z-0 transform-gpu">
+                    <div className="absolute inset-0 overflow-hidden w-full h-full pointer-events-none select-none z-0">
                       <img src={img} className="absolute inset-0 w-full h-full object-cover opacity-40 blur-xl scale-125 pointer-events-none" alt="" />
                     </div>
                   )}
                   
                   {img.match(/\.(mp4|webm|ogg|mov|m4v)$/i) ? (
-                    <video src={`${img}#t=0.1`} preload="metadata" playsInline controls className="relative z-10 w-full h-full object-contain transform-gpu" onClick={(e) => e.stopPropagation()} />
+                    <video src={`${img}#t=0.1`} preload="metadata" playsInline controls className="relative z-10 w-full h-full object-contain" onClick={(e) => e.stopPropagation()} />
                   ) : (
                     <img 
                       src={img} 
                       alt={`${memory.title} ${i+1}`} 
-                      className="relative z-10 w-full h-full object-contain group-hover:scale-105 transition-transform duration-700 transform-gpu" 
+                      className="relative z-10 w-full h-full object-contain group-hover:scale-105 transition-transform duration-700" 
                     />
                   )}
                 </div>
