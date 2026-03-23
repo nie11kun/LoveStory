@@ -138,6 +138,25 @@ export default function App() {
     setScreen(s);
   };
 
+  // Scroll Restoration Logic
+  const scrollPositions = React.useRef<Record<string, number>>({});
+
+  useEffect(() => {
+    const handleScroll = () => {
+      scrollPositions.current[screen] = window.scrollY;
+    };
+    
+    // As soon as the screen changes, we restore its last known scroll position
+    // We use setTimeout to ensure React has swapped the DOM nodes first
+    setTimeout(() => {
+      const pos = scrollPositions.current[screen] || 0;
+      window.scrollTo({ top: pos, behavior: 'instant' });
+    }, 0);
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [screen]);
+
   return (
     <div className="min-h-screen bg-background text-on-surface font-body selection:bg-primary-container/30">
       <AnimatePresence mode="wait">

@@ -43,15 +43,21 @@ export const AlbumScreen = ({ memories, t }: { memories: Memory[], t: any }) => 
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             onClick={() => setSelectedIndex(idx)}
-            className="aspect-square rounded-xl overflow-hidden bg-surface-container cursor-pointer shadow-sm group"
+            className="aspect-square rounded-xl overflow-hidden bg-black/5 relative cursor-pointer shadow-sm group"
           >
+            {!img.url.match(/\.(mp4|webm|ogg)$/i) && (
+              <div className="absolute inset-0 overflow-hidden w-full h-full pointer-events-none select-none z-0">
+                <img src={img.url} className="absolute inset-0 w-full h-full object-cover opacity-40 blur-xl scale-125 pointer-events-none" alt="" />
+              </div>
+            )}
+            
             {img.url.match(/\.(mp4|webm|ogg)$/i) ? (
-              <video src={img.url} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+              <video src={img.url} className="relative z-10 w-full h-full object-contain" controls playsInline />
             ) : (
               <img 
                 src={img.url} 
                 alt={img.title} 
-                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" 
+                className="relative z-10 w-full h-full object-contain transition-transform duration-500 group-hover:scale-110" 
               />
             )}
           </motion.div>

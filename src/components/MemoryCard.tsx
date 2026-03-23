@@ -65,13 +65,24 @@ export const MemoryCard = ({ memory, index, t, formatDate, onClick }: { memory: 
               {memory.images.map((img: string, i: number) => (
                 <div 
                   key={i} 
-                  className="min-w-full h-full snap-center relative flex-shrink-0 cursor-pointer"
+                  className="w-full h-full flex-none snap-center relative cursor-pointer overflow-hidden bg-black/5"
                   onClick={(e) => { e.stopPropagation(); setSelectedIndex(i); }}
                 >
+                  {/* Blurred Background Layer for elegant letterboxing (isolated to prevent Safari layout bleed) */}
+                  {!img.match(/\.(mp4|webm|ogg)$/i) && (
+                    <div className="absolute inset-0 overflow-hidden w-full h-full pointer-events-none select-none">
+                      <img src={img} className="absolute inset-0 w-full h-full object-cover opacity-40 blur-xl scale-125 pointer-events-none" alt="" />
+                    </div>
+                  )}
+                  
                   {img.match(/\.(mp4|webm|ogg)$/i) ? (
-                    <video src={img} className="w-full h-full object-cover" controls playsInline />
+                    <video src={img} className="relative z-10 w-full h-full object-contain" controls playsInline />
                   ) : (
-                    <img src={img} alt={`${memory.title} ${i+1}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                    <img 
+                      src={img} 
+                      alt={`${memory.title} ${i+1}`} 
+                      className="relative z-10 w-full h-full object-contain group-hover:scale-105 transition-transform duration-700" 
+                    />
                   )}
                 </div>
               ))}
