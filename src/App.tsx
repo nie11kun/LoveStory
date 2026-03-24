@@ -93,16 +93,33 @@ export default function App() {
   const bgmInitialized = React.useRef(false);
 
   useEffect(() => {
-    if (profile?.bgmUrl && audioRef.current && screen !== 'lock') {
-      if (!bgmInitialized.current && !userPausedBgm.current) {
+    if (!profile?.bgmUrl || !audioRef.current || screen === 'lock' || bgmInitialized.current || userPausedBgm.current) return;
+
+    const tryPlay = () => {
+      if (audioRef.current && !bgmInitialized.current && !userPausedBgm.current) {
         audioRef.current.play().then(() => {
           setIsPlayingBgm(true);
           bgmInitialized.current = true;
-        }).catch(() => {
-          console.log("Autoplay blocked by browser policy, waiting for interaction.");
-        });
+        }).catch(() => {});
       }
-    }
+      document.removeEventListener('click', tryPlay);
+      document.removeEventListener('touchstart', tryPlay);
+    };
+
+    // Try immediately first
+    audioRef.current.play().then(() => {
+      setIsPlayingBgm(true);
+      bgmInitialized.current = true;
+    }).catch(() => {
+      // Blocked by browser policy — wait for first user interaction
+      document.addEventListener('click', tryPlay, { once: true });
+      document.addEventListener('touchstart', tryPlay, { once: true });
+    });
+
+    return () => {
+      document.removeEventListener('click', tryPlay);
+      document.removeEventListener('touchstart', tryPlay);
+    };
   }, [profile?.bgmUrl, screen]);
 
   const toggleBgm = () => {
