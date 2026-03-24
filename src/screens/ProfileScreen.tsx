@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Upload, Calendar, X, Plus, ChevronRight, Loader2 } from 'lucide-react';
+import { Upload, Calendar, X, Plus, ChevronRight, Loader2, Music } from 'lucide-react';
 import { UserProfile } from '../types';
 
 export const ProfileScreen = ({ profile, onSave, onBack, t }: { profile?: UserProfile | null, onSave: (p: UserProfile) => void, onBack: () => void, t: any }) => {
@@ -30,6 +30,8 @@ export const ProfileScreen = ({ profile, onSave, onBack, t }: { profile?: UserPr
     }
   };
 
+  const bgmFileRef = React.useRef<HTMLInputElement>(null);
+
   const handleBgmChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setIsUploadingBgm(true);
@@ -45,6 +47,39 @@ export const ProfileScreen = ({ profile, onSave, onBack, t }: { profile?: UserPr
         setIsUploadingBgm(false);
       }
     }
+  };
+
+  const handleBgmButtonClick = () => {
+    if (isUploadingBgm) return;
+    const trimmedUrl = bgmUrl.trim();
+    if (trimmedUrl && (trimmedUrl.startsWith('http://') || trimmedUrl.startsWith('https://'))) {
+      // Network URL already pasted, use it directly via upload to R2
+      setIsUploadingBgm(true);
+      fetch(trimmedUrl)
+        .then(r => r.blob())
+        .then(blob => {
+          const formData = new FormData();
+          const ext = trimmedUrl.split('.').pop()?.split('?')[0] || 'mp3';
+          formData.append('files', blob, `network-bgm.${ext}`);
+          return fetch('/api/upload', { method: 'POST', body: formData });
+        })
+        .then(res => res.json())
+        .then(({ urls }) => { if (urls?.length > 0) setBgmUrl(urls[0]); })
+        .catch(err => console.error('Network BGM upload failed:', err))
+        .finally(() => setIsUploadingBgm(false));
+    } else {
+      // No URL, open local file picker
+      bgmFileRef.current?.click();
+    }
+  };
+
+  const getBgmDisplayName = (url: string) => {
+    if (!url) return '';
+    try {
+      const name = decodeURIComponent(url.split('/').pop() || '');
+      // Remove hash prefix if present (e.g. "a1b2c3d4e5.mp3" -> keep as is)
+      return name.length > 40 ? name.slice(0, 37) + '...' : name;
+    } catch { return url.split('/').pop() || ''; }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -133,21 +168,32 @@ export const ProfileScreen = ({ profile, onSave, onBack, t }: { profile?: UserPr
 
         <div className="space-y-2">
           <label className="font-body text-sm font-medium text-secondary ml-1">背景音乐 (BGM)</label>
+          {profile?.bgmUrl && (
+            <div className="flex items-center gap-2 px-4 py-2 bg-primary/5 rounded-lg mb-1">
+              <Music size={14} className="text-primary flex-shrink-0" />
+              <span className="font-body text-xs text-on-surface-variant truncate">当前音乐：{getBgmDisplayName(profile.bgmUrl)}</span>
+            </div>
+          )}
           <div className="flex flex-col sm:flex-row gap-2">
             <input 
               className="flex-1 w-full bg-surface-container-low border-none rounded-xl px-4 py-4 text-on-surface focus:ring-2 focus:ring-primary-container/30 font-body text-sm" 
               type="text" value={bgmUrl} onChange={(e) => setBgmUrl(e.target.value)} 
-              placeholder="输入网络MP3链接，或上传本地文件"
+              placeholder="输入网络MP3链接，或点击右侧按钮上传本地文件"
             />
-            <label className={`w-full sm:w-auto px-6 py-4 bg-primary/10 text-primary rounded-xl font-body text-sm transition-all duration-300 flex items-center justify-center whitespace-nowrap ${isUploadingBgm ? 'opacity-70 cursor-wait bg-primary/20 scale-95' : 'hover:bg-primary/20 cursor-pointer'}`}>
+            <button 
+              type="button"
+              onClick={handleBgmButtonClick}
+              disabled={isUploadingBgm}
+              className={`w-full sm:w-auto px-6 py-4 bg-primary/10 text-primary rounded-xl font-body text-sm transition-all duration-300 flex items-center justify-center whitespace-nowrap ${isUploadingBgm ? 'opacity-70 cursor-wait bg-primary/20 scale-95' : 'hover:bg-primary/20 cursor-pointer'}`}
+            >
               {isUploadingBgm ? (
                 <Loader2 size={16} className="mr-2 animate-spin" />
               ) : (
                 <Upload size={16} className="mr-2" />
               )}
-              {isUploadingBgm ? '上传中...' : '上传音频'}
-              <input type="file" accept="audio/*" className="hidden" onChange={handleBgmChange} disabled={isUploadingBgm} />
-            </label>
+              {isUploadingBgm ? '上传中...' : bgmUrl.trim().startsWith('http') ? '上传链接' : '上传音频'}
+            </button>
+            <input ref={bgmFileRef} type="file" accept="audio/*" className="hidden" onChange={handleBgmChange} disabled={isUploadingBgm} />
           </div>
         </div>
 

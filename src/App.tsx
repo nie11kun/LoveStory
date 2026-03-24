@@ -89,11 +89,19 @@ export default function App() {
     fetchData();
   }, []);
 
+  const userPausedBgm = React.useRef(false);
+  const bgmInitialized = React.useRef(false);
+
   useEffect(() => {
     if (profile?.bgmUrl && audioRef.current && screen !== 'lock') {
-      audioRef.current.play().then(() => setIsPlayingBgm(true)).catch(() => {
-        console.log("Autoplay blocked by browser policy, waiting for interaction.");
-      });
+      if (!bgmInitialized.current && !userPausedBgm.current) {
+        audioRef.current.play().then(() => {
+          setIsPlayingBgm(true);
+          bgmInitialized.current = true;
+        }).catch(() => {
+          console.log("Autoplay blocked by browser policy, waiting for interaction.");
+        });
+      }
     }
   }, [profile?.bgmUrl, screen]);
 
@@ -102,9 +110,11 @@ export default function App() {
       if (isPlayingBgm) {
         audioRef.current.pause();
         setIsPlayingBgm(false);
+        userPausedBgm.current = true;
       } else {
         audioRef.current.play();
         setIsPlayingBgm(true);
+        userPausedBgm.current = false;
       }
     }
   };

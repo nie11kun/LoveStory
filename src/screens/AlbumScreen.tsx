@@ -8,7 +8,8 @@ export const AlbumScreen = ({ memories, t }: { memories: Memory[], t: any }) => 
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [displayCount, setDisplayCount] = useState(24);
   
-  const allImages = memories.flatMap(m => m.images.map(img => ({ url: img, title: m.title, date: m.date })));
+  const sortedMemories = [...memories].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const allImages = sortedMemories.flatMap(m => m.images.map(img => ({ url: img, title: m.title, date: m.date })));
   const displayedImages = allImages.slice(0, displayCount);
   const minSwipeDistance = 50;
 
