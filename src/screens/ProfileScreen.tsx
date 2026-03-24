@@ -9,7 +9,7 @@ export const ProfileScreen = ({ profile, onSave, onBack, t }: { profile?: UserPr
   const [partnerName, setPartnerName] = useState(profile?.partnerName || '');
   const [anniversaryDate, setAnniversaryDate] = useState(profile?.anniversaryDate || '');
   const [avatarUrl, setAvatarUrl] = useState(profile?.avatarUrl || '');
-  const [bgmUrl, setBgmUrl] = useState(profile?.bgmUrl || '');
+  const [bgmUrl, setBgmUrl] = useState('');
   const [customTags, setCustomTags] = useState<string[]>(initialTags);
   const [newTagInput, setNewTagInput] = useState('');
   const [isAddingTag, setIsAddingTag] = useState(false);
@@ -86,7 +86,7 @@ export const ProfileScreen = ({ profile, onSave, onBack, t }: { profile?: UserPr
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      const updatedProfile = { ...profile, name, partnerName, anniversaryDate, avatarUrl, bgmUrl, customTags };
+      const updatedProfile = { ...profile, name, partnerName, anniversaryDate, avatarUrl, bgmUrl: bgmUrl || profile?.bgmUrl || '', customTags };
       const res = await fetch('/api/profile', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
