@@ -40,7 +40,7 @@ export const MemoryCard = ({ memory, index, t, formatDate, onClick }: { memory: 
   };
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 h-full">
       <div className={`flex items-center gap-3 mb-2 ${index % 2 !== 0 ? 'flex-row-reverse' : ''}`}>
         <span className="bg-tertiary-fixed text-on-tertiary-fixed px-4 py-1 rounded-full font-headline italic text-sm whitespace-nowrap">
           {formatDate(memory.date)}

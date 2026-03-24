@@ -19,23 +19,23 @@ export const TimelineScreen = ({ memories, t, lang, onSelectMemory }: { memories
   };
 
   return (
-    <main className="pt-24 pb-32 px-6 max-w-2xl mx-auto">
+    <main className="pt-24 pb-32 px-6 max-w-7xl mx-auto">
       <section className="mb-12 text-center">
         <p className="font-headline italic text-on-surface-variant text-lg leading-relaxed">
           {t.quote}
         </p>
       </section>
 
-      <div className="relative space-y-16">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
         {displayedMemories.map((memory, index) => (
           <motion.article 
             key={memory.id}
-            initial={{ opacity: 0, x: index % 2 === 0 ? -20 : 20 }}
-            whileInView={{ opacity: 1, x: 0 }}
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             className="relative"
           >
-            <MemoryCard memory={memory} index={index} t={t} formatDate={formatDate} onClick={() => onSelectMemory(memory)} />
+            <MemoryCard memory={memory} index={0} t={t} formatDate={formatDate} onClick={() => onSelectMemory(memory)} />
           </motion.article>
         ))}
       </div>
