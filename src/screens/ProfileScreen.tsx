@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Upload, Calendar, X, Plus, ChevronRight } from 'lucide-react';
+import { Upload, Calendar, X, Plus, ChevronRight, Loader2 } from 'lucide-react';
 import { UserProfile } from '../types';
 
 export const ProfileScreen = ({ profile, onSave, onBack, t }: { profile?: UserProfile | null, onSave: (p: UserProfile) => void, onBack: () => void, t: any }) => {
@@ -9,10 +9,12 @@ export const ProfileScreen = ({ profile, onSave, onBack, t }: { profile?: UserPr
   const [partnerName, setPartnerName] = useState(profile?.partnerName || '');
   const [anniversaryDate, setAnniversaryDate] = useState(profile?.anniversaryDate || '');
   const [avatarUrl, setAvatarUrl] = useState(profile?.avatarUrl || '');
+  const [bgmUrl, setBgmUrl] = useState(profile?.bgmUrl || '');
   const [customTags, setCustomTags] = useState<string[]>(initialTags);
   const [newTagInput, setNewTagInput] = useState('');
   const [isAddingTag, setIsAddingTag] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUploadingBgm, setIsUploadingBgm] = useState(false);
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -28,11 +30,28 @@ export const ProfileScreen = ({ profile, onSave, onBack, t }: { profile?: UserPr
     }
   };
 
+  const handleBgmChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setIsUploadingBgm(true);
+      const formData = new FormData();
+      formData.append('files', e.target.files[0]);
+      try {
+        const res = await fetch('/api/upload', { method: 'POST', body: formData });
+        if (res.ok) {
+          const { urls } = await res.json();
+          if (urls.length > 0) setBgmUrl(urls[0]);
+        }
+      } catch (err) { console.error(err); } finally {
+        setIsUploadingBgm(false);
+      }
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
     try {
-      const updatedProfile = { ...profile, name, partnerName, anniversaryDate, avatarUrl, customTags };
+      const updatedProfile = { ...profile, name, partnerName, anniversaryDate, avatarUrl, bgmUrl, customTags };
       const res = await fetch('/api/profile', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -109,6 +128,26 @@ export const ProfileScreen = ({ profile, onSave, onBack, t }: { profile?: UserPr
               type="date" value={anniversaryDate} onChange={(e) => setAnniversaryDate(e.target.value)} 
             />
             <Calendar className="absolute right-4 top-1/2 -translate-y-1/2 text-outline pointer-events-none" size={20} />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <label className="font-body text-sm font-medium text-secondary ml-1">背景音乐 (BGM)</label>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <input 
+              className="flex-1 w-full bg-surface-container-low border-none rounded-xl px-4 py-4 text-on-surface focus:ring-2 focus:ring-primary-container/30 font-body text-sm" 
+              type="text" value={bgmUrl} onChange={(e) => setBgmUrl(e.target.value)} 
+              placeholder="输入网络MP3链接，或上传本地文件"
+            />
+            <label className={`w-full sm:w-auto px-6 py-4 bg-primary/10 text-primary rounded-xl font-body text-sm transition-all duration-300 flex items-center justify-center whitespace-nowrap ${isUploadingBgm ? 'opacity-70 cursor-wait bg-primary/20 scale-95' : 'hover:bg-primary/20 cursor-pointer'}`}>
+              {isUploadingBgm ? (
+                <Loader2 size={16} className="mr-2 animate-spin" />
+              ) : (
+                <Upload size={16} className="mr-2" />
+              )}
+              {isUploadingBgm ? '上传中...' : '上传音频'}
+              <input type="file" accept="audio/*" className="hidden" onChange={handleBgmChange} disabled={isUploadingBgm} />
+            </label>
           </div>
         </div>
 

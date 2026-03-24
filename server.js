@@ -4,7 +4,8 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import multer from 'multer';
 import dotenv from 'dotenv';
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, PutObjectCommand, DeleteObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
+import crypto from 'crypto';
 
 dotenv.config();
 
@@ -48,8 +49,31 @@ if (imgurClientId) {
   console.log('⚠️ Imgur API Storage Enabled (Publicly Accessible)');
 }
 
+const getFileHash = (filePath) => {
+  return new Promise((resolve, reject) => {
+    const hash = crypto.createHash('md5');
+    const stream = fs.createReadStream(filePath);
+    stream.on('data', chunk => hash.update(chunk));
+    stream.on('end', () => resolve(hash.digest('hex')));
+    stream.on('error', err => reject(err));
+  });
+};
+
 // Helper to physically delete media from storage
-const deleteMediaByUrl = async (url) => {
+const deleteMediaByUrl = async (url, globalData) => {
+  if (globalData) {
+    let refCount = 0;
+    if (globalData.profile?.avatarUrl === url) refCount++;
+    if (globalData.profile?.bgmUrl === url) refCount++;
+    for (const memory of globalData.memories) {
+      if (memory.images && memory.images.includes(url)) refCount++;
+    }
+    if (refCount > 0) {
+      console.log(`♻️ GC Skipped: Media [${url.split('/').pop()}] is kept active by ${refCount} other reference(s).`);
+      return;
+    }
+  }
+
   try {
     if (s3Client && s3PublicDomain && url.startsWith(s3PublicDomain)) {
       // It's an S3/R2 object
@@ -147,15 +171,21 @@ app.post('/api/upload', upload.array('files', 10), async (req, res) => {
     for (const file of req.files) {
       if (s3Client && s3PublicDomain) {
         // Option A: Cloudflare R2 / AWS S3
-        const fileStream = fs.createReadStream(file.path);
-        const fileName = `media/${file.filename}`;
+        const fileHash = await getFileHash(file.path);
+        const ext = path.extname(file.originalname).toLowerCase();
+        const fileName = `media/${fileHash}${ext}`;
         
-        await s3Client.send(new PutObjectCommand({
-          Bucket: process.env.S3_BUCKET_NAME,
-          Key: fileName,
-          Body: fileStream,
-          ContentType: file.mimetype
-        }));
+        try {
+          // Check if it already exists
+          await s3Client.send(new HeadObjectCommand({ Bucket: process.env.S3_BUCKET_NAME, Key: fileName }));
+          console.log(`♻️ S3 Deduplication: [${fileName}] already exists, skipping upload.`);
+        } catch (err) {
+          // It doesn't exist, proceed to upload
+          const fileStream = fs.createReadStream(file.path);
+          const mimeTypes = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.gif': 'image/gif', '.webp': 'image/webp', '.mp4': 'video/mp4', '.webm': 'video/webm', '.mov': 'video/quicktime', '.m4v': 'video/x-m4v', '.mp3': 'audio/mpeg', '.wav': 'audio/wav', '.m4a': 'audio/mp4', '.ogg': 'audio/ogg' };
+          const contentType = mimeTypes[ext] || file.mimetype;
+          await s3Client.send(new PutObjectCommand({ Bucket: process.env.S3_BUCKET_NAME, Key: fileName, Body: fileStream, ContentType: contentType }));
+        }
         
         fs.unlinkSync(file.path); // Safely remove local temp file
         urls.push(`${s3PublicDomain}/${fileName}`);
@@ -185,7 +215,18 @@ app.post('/api/upload', upload.array('files', 10), async (req, res) => {
         }
       } else {
         // Default C: Local Disk Storage
-        urls.push(`/uploads/${file.filename}`);
+        const fileHash = await getFileHash(file.path);
+        const ext = path.extname(file.originalname).toLowerCase();
+        const newFileName = `${fileHash}${ext}`;
+        const newFilePath = path.join(UPLOADS_DIR, newFileName);
+        
+        if (fs.existsSync(newFilePath)) {
+           console.log(`♻️ Local Deduplication: [${newFileName}] already exists, skipping.`);
+           fs.unlinkSync(file.path);
+        } else {
+           fs.renameSync(file.path, newFilePath);
+        }
+        urls.push(`/uploads/${newFileName}`);
       }
     }
 
@@ -233,10 +274,6 @@ app.put('/api/memories/:id', async (req, res) => {
   const newImages = updatedMemory.images || [];
   const orphanedImages = oldImages.filter(img => !newImages.includes(img));
   
-  for (const mediaUrl of orphanedImages) {
-    await deleteMediaByUrl(mediaUrl);
-  }
-
   if (updatedMemory.date) {
     const inputDate = new Date(updatedMemory.date);
     const today = new Date();
@@ -245,6 +282,11 @@ app.put('/api/memories/:id', async (req, res) => {
   }
   
   data.memories[index] = updatedMemory;
+  
+  for (const mediaUrl of orphanedImages) {
+    await deleteMediaByUrl(mediaUrl, data);
+  }
+
   writeData(data);
   res.json(updatedMemory);
 });
@@ -256,14 +298,15 @@ app.delete('/api/memories/:id', async (req, res) => {
   
   const memoryToDelete = data.memories[index];
   
-  // Garbage collect all associated images
+  data.memories.splice(index, 1);
+  
+  // Garbage collect all associated images safely
   if (memoryToDelete.images && memoryToDelete.images.length > 0) {
     for (const mediaUrl of memoryToDelete.images) {
-      await deleteMediaByUrl(mediaUrl);
+      await deleteMediaByUrl(mediaUrl, data);
     }
   }
 
-  data.memories.splice(index, 1);
   writeData(data);
   res.status(204).send();
 });
@@ -319,6 +362,26 @@ const migrateLocalFilesToS3 = async () => {
         
         await s3Client.send(new PutObjectCommand({ Bucket: process.env.S3_BUCKET_NAME, Key: s3Key, Body: fileStream, ContentType: mimeTypes[ext] || 'application/octet-stream' }));
         data.profile.avatarUrl = `${s3PublicDomain}/${s3Key}`;
+        updated = true;
+        fs.unlinkSync(filePath);
+      }
+    }
+
+    // Migrate BGM
+    if (data.profile?.bgmUrl?.startsWith('/uploads/')) {
+      const url = data.profile.bgmUrl;
+      const fileName = url.replace('/uploads/', '');
+      const filePath = path.join(UPLOADS_DIR, fileName);
+
+      if (fs.existsSync(filePath)) {
+        console.log(`🚀 Automated Migration: Pushing BGM [${fileName}] to S3...`);
+        const fileStream = fs.createReadStream(filePath);
+        const s3Key = `media/${fileName}`;
+        const ext = path.extname(fileName).toLowerCase();
+        const mimeTypes = { '.mp3': 'audio/mpeg', '.wav': 'audio/wav', '.m4a': 'audio/mp4', '.ogg': 'audio/ogg' };
+        
+        await s3Client.send(new PutObjectCommand({ Bucket: process.env.S3_BUCKET_NAME, Key: s3Key, Body: fileStream, ContentType: mimeTypes[ext] || 'application/octet-stream' }));
+        data.profile.bgmUrl = `${s3PublicDomain}/${s3Key}`;
         updated = true;
         fs.unlinkSync(filePath);
       }

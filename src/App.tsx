@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Screen, Memory, UserProfile } from './types';
 import { Language, translations } from './utils/i18n';
 import { MAIN_PASSCODE, ADD_PASSCODE, UNLOCK_EXPIRY_MS } from './utils/constants';
+import { Music, Pause } from 'lucide-react';
 
 import { TopBar } from './components/TopBar';
 import { BottomNav } from './components/BottomNav';
@@ -19,6 +20,8 @@ export default function App() {
   const [isAddLocked, setIsAddLocked] = useState(true);
   const [memories, setMemories] = useState<Memory[]>([]);
   const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [isPlayingBgm, setIsPlayingBgm] = useState(false);
+  const audioRef = React.useRef<HTMLAudioElement | null>(null);
 
   const [activeMemory, setActiveMemory] = useState<Memory | null>(null);
   const [pendingAction, setPendingAction] = useState<{ type: 'edit'|'delete'|'add'|'profile', memory?: Memory } | null>(null);
@@ -85,6 +88,26 @@ export default function App() {
     };
     fetchData();
   }, []);
+
+  useEffect(() => {
+    if (profile?.bgmUrl && audioRef.current && screen !== 'lock') {
+      audioRef.current.play().then(() => setIsPlayingBgm(true)).catch(() => {
+        console.log("Autoplay blocked by browser policy, waiting for interaction.");
+      });
+    }
+  }, [profile?.bgmUrl, screen]);
+
+  const toggleBgm = () => {
+    if (audioRef.current) {
+      if (isPlayingBgm) {
+        audioRef.current.pause();
+        setIsPlayingBgm(false);
+      } else {
+        audioRef.current.play();
+        setIsPlayingBgm(true);
+      }
+    }
+  };
 
   // Persistence Logic
   useEffect(() => {
@@ -260,6 +283,22 @@ export default function App() {
             )}
 
             <BottomNav activeScreen={screen} onNavigate={navigateTo} t={t} />
+
+            {profile?.bgmUrl && screen !== 'lock' && (
+              <>
+                <audio ref={audioRef} src={profile.bgmUrl} loop />
+                <button 
+                  onClick={toggleBgm}
+                  className="fixed right-6 bottom-24 z-[90] w-12 h-12 bg-white/80 backdrop-blur-md flex items-center justify-center rounded-full shadow-lg border border-outline-variant/20 hover:scale-110 active:scale-95 transition-all group"
+                >
+                  {isPlayingBgm ? (
+                    <Pause size={20} className="text-primary" />
+                  ) : (
+                    <Music size={20} className="text-secondary group-hover:text-primary transition-colors" />
+                  )}
+                </button>
+              </>
+            )}
           </motion.div>
         )}
       </AnimatePresence>

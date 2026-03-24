@@ -15,5 +15,6 @@ export interface UserProfile {
   partnerName: string;
   anniversaryDate: string;
   avatarUrl: string;
+  bgmUrl?: string;
   customTags?: string[];
 }
