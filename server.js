@@ -411,7 +411,21 @@ setTimeout(() => {
 app.get('*', (req, res) => {
   const indexPath = path.join(DIST_DIR, 'index.html');
   if (fs.existsSync(indexPath)) {
-    res.sendFile(indexPath);
+    // Inject runtime environment variables into index.html
+    let html = fs.readFileSync(indexPath, 'utf8');
+    const runtimeConfig = {
+      VITE_MAIN_PASSCODE: process.env.VITE_MAIN_PASSCODE,
+      VITE_ADD_PASSCODE: process.env.VITE_ADD_PASSCODE,
+      VITE_UNLOCK_EXPIRY_MS: process.env.VITE_UNLOCK_EXPIRY_MS,
+    };
+    const configScript = `
+    <script id="runtime-config">
+      window.RUNTIME_CONFIG = ${JSON.stringify(runtimeConfig)};
+    </script>`;
+    
+    // Insert after <head>
+    html = html.replace('<head>', '<head>' + configScript);
+    res.send(html);
   } else {
     res.status(404).send('Production build not found. Please run "npm run build" first.');
   }
