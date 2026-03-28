@@ -245,16 +245,6 @@ app.post('/api/memories', (req, res) => {
     ...req.body
   };
   
-  // Calculate daysAgo roughly based on date input
-  if (newMemory.date) {
-    const inputDate = new Date(newMemory.date);
-    const today = new Date();
-    const diffTime = Math.abs(today.getTime() - inputDate.getTime());
-    newMemory.daysAgo = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-  } else {
-    newMemory.daysAgo = 0;
-  }
-  
   data.memories.push(newMemory);
   writeData(data);
   
@@ -273,13 +263,6 @@ app.put('/api/memories/:id', async (req, res) => {
   const oldImages = oldMemory.images || [];
   const newImages = updatedMemory.images || [];
   const orphanedImages = oldImages.filter(img => !newImages.includes(img));
-  
-  if (updatedMemory.date) {
-    const inputDate = new Date(updatedMemory.date);
-    const today = new Date();
-    const diffTime = Math.abs(today.getTime() - inputDate.getTime());
-    updatedMemory.daysAgo = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-  }
   
   data.memories[index] = updatedMemory;
   
@@ -396,8 +379,33 @@ const migrateLocalFilesToS3 = async () => {
   }
 };
 
-// Trigger migration gracefully in background
-setTimeout(migrateLocalFilesToS3, 1000);
+// Cleanup stale data (e.g., removing static daysAgo)
+const cleanupStaleData = () => {
+  try {
+    const data = readData();
+    let updated = false;
+
+    for (const memory of data.memories) {
+      if (Object.prototype.hasOwnProperty.call(memory, 'daysAgo')) {
+        delete memory.daysAgo;
+        updated = true;
+      }
+    }
+
+    if (updated) {
+      writeData(data);
+      console.log('🧹 Cleanup: Removed stale "daysAgo" from existing memories.');
+    }
+  } catch (error) {
+    console.error('Cleanup failed:', error);
+  }
+};
+
+// Trigger migrations gracefully in background
+setTimeout(() => {
+  migrateLocalFilesToS3();
+  cleanupStaleData();
+}, 1000);
 
 // Serve React SPA fallback
 app.get('*', (req, res) => {

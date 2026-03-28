@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Memory } from '../types';
+import { calculateDaysAgo } from '../utils/date';
 
 export const MemoryCard = ({ memory, index, t, formatDate, onClick }: { memory: Memory, index: number, t: any, formatDate: (s: string) => string, onClick?: () => void }) => {
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -46,7 +47,7 @@ export const MemoryCard = ({ memory, index, t, formatDate, onClick }: { memory: 
           {formatDate(memory.date)}
         </span>
         <span className="font-body text-xs text-secondary italic opacity-80 whitespace-nowrap">
-          {t.daysAgo.replace('{days}', memory.daysAgo.toString())}
+          {t.daysAgo.replace('{days}', calculateDaysAgo(memory.date).toString())}
         </span>
         <div className="h-[1px] flex-grow bg-outline-variant opacity-30"></div>
       </div>

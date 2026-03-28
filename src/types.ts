@@ -7,7 +7,7 @@ export interface Memory {
   description: string;
   images: string[];
   tags: string[];
-  daysAgo: number;
+  daysAgo?: number;
 }
 
 export interface UserProfile {
