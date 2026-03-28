@@ -24,7 +24,7 @@ const PORT = process.env.PORT || 3001;
 
 app.use(express.json());
 app.use('/uploads', express.static(UPLOADS_DIR));
-app.use(express.static(DIST_DIR));
+// app.use(express.static(DIST_DIR)); // Removed to allow dynamic index.html injection below
 
 // Setup External Cloud Storage
 let s3Client = null;
@@ -408,6 +408,8 @@ setTimeout(() => {
 }, 1000);
 
 // Serve React SPA fallback
+app.use(express.static(DIST_DIR, { index: false }));
+// Handle all other requests by serving the injected index.html (SPA fallback)
 app.get('*', (req, res) => {
   const indexPath = path.join(DIST_DIR, 'index.html');
   if (fs.existsSync(indexPath)) {
@@ -423,7 +425,6 @@ app.get('*', (req, res) => {
       window.RUNTIME_CONFIG = ${JSON.stringify(runtimeConfig)};
     </script>`;
     
-    // Insert after <head>
     html = html.replace('<head>', '<head>' + configScript);
     res.send(html);
   } else {
