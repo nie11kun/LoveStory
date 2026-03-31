@@ -131,7 +131,7 @@ export const MemoryFormScreen = ({ t, onSave, onNavigate, initialMemory, profile
         <div className="grid grid-cols-3 gap-4">
           {networkUrls.map((url, i) => (
             <div key={'net'+i} className="aspect-square bg-surface-container rounded-xl overflow-hidden shadow-sm relative group">
-              {url.match(/\.(mp4|webm|ogg|mov|m4v)$/i) ? (
+              {url.match(/\.(mp4|webm|ogg|mov|m4v|hevc|h265)$/i) ? (
                 <video src={`${url}#t=0.1`} preload="metadata" playsInline controls className="w-full h-full object-contain" onClick={(e) => e.stopPropagation()} />
               ) : (
                 <img src={url} alt="Preview" className="w-full h-full object-cover" />
@@ -151,7 +151,7 @@ export const MemoryFormScreen = ({ t, onSave, onNavigate, initialMemory, profile
           ))}
 
           <label className="aspect-square cursor-pointer rounded-xl border-2 border-dashed border-outline-variant flex flex-col items-center justify-center text-outline transition-all hover:bg-surface-container-low hover:border-primary/40 group relative overflow-hidden">
-            <input type="file" multiple accept="image/*,video/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={handleFileChange} />
+            <input type="file" multiple accept="image/*,video/*,.hevc,.h265,.mov,.mp4" className="absolute inset-0 opacity-0 cursor-pointer" onChange={handleFileChange} />
             <Plus size={32} className="group-hover:scale-110 transition-transform" />
             <span className="font-body text-[10px] mt-1 opacity-60">本地上传</span>
           </label>
@@ -200,7 +200,7 @@ export const MemoryFormScreen = ({ t, onSave, onNavigate, initialMemory, profile
           <label className="font-body text-sm font-medium text-secondary ml-1">{t.date}</label>
           <div className="relative">
             <input 
-              className="w-full bg-surface-container-low border-none rounded-xl px-4 py-4 text-on-surface focus:ring-2 focus:ring-primary-container/30 font-body" 
+              className="block flex-1 w-full min-w-0 max-w-full appearance-none bg-surface-container-low border-none rounded-xl px-4 py-4 text-on-surface focus:ring-2 focus:ring-primary-container/30 font-body" 
               type="date" 
               value={date}
               onChange={(e) => setDate(e.target.value)}

@@ -46,12 +46,8 @@ export default function App() {
   };
 
   const attemptDelete = (m: Memory) => {
-    if (isAddLocked) {
-      setPendingAction({ type: 'delete', memory: m });
-      setScreen('passcode_verify');
-    } else {
-      executeDelete(m.id);
-    }
+    setPendingAction({ type: 'delete', memory: m });
+    setScreen('passcode_verify');
   };
 
   const executeDelete = async (id: string) => {
