@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { ChevronRight, ChevronLeft, X } from 'lucide-react';
+import { ChevronRight, ChevronLeft, ChevronDown, X, Play } from 'lucide-react';
 import { Memory } from '../types';
+import { isVideoUrl } from '../utils/date';
+import { useColumnCount, toColumns } from '../utils/useColumnCount';
 
 export const AlbumScreen = ({ memories, t }: { memories: Memory[], t: any }) => {
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
@@ -11,6 +13,8 @@ export const AlbumScreen = ({ memories, t }: { memories: Memory[], t: any }) => 
   const sortedMemories = [...memories].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   const allImages = sortedMemories.flatMap(m => m.images.map(img => ({ url: img, title: m.title, date: m.date })));
   const displayedImages = allImages.slice(0, displayCount);
+  const columnCount = useColumnCount([[1024, 4], [768, 3]], 2);
+  const columns = toColumns(displayedImages.map((img, idx) => ({ ...img, idx })), columnCount);
   const minSwipeDistance = 50;
 
   useEffect(() => {
@@ -33,49 +37,67 @@ export const AlbumScreen = ({ memories, t }: { memories: Memory[], t: any }) => 
   }, [selectedIndex, allImages.length]);
 
   return (
-    <main className="pt-24 pb-32 px-6 max-w-5xl mx-auto animate-fade-in">
-      <section className="mb-12 text-center">
-        <h1 className="font-headline font-bold text-4xl tracking-tight text-primary mb-2">{t.albumTitle}</h1>
-        <p className="font-headline italic text-on-surface-variant text-lg">{t.albumSubtitle}</p>
+    <main className="pt-24 sm:pt-28 pb-36 px-4 sm:px-8 max-w-6xl mx-auto animate-fade-in">
+      <section className="mb-10 sm:mb-14 text-center">
+        <p className="eyebrow">{allImages.length} {t.photosCount}</p>
+        <h1 className="mt-3 font-body font-semibold text-[32px] sm:text-[40px] tracking-tight text-ink">{t.albumTitle}</h1>
+        <p className="mt-2 font-body text-[15px] text-ink-soft">{t.albumSubtitle}</p>
       </section>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-        {displayedImages.map((img, idx) => (
-          <motion.div 
-            key={idx}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            onClick={() => setSelectedIndex(idx)}
-            className="aspect-square rounded-xl overflow-hidden bg-black/5 relative cursor-pointer shadow-sm group"
-          >
-            {!img.url.match(/\.(mp4|webm|ogg|mov|m4v)$/i) && (
-              <div className="absolute inset-0 overflow-hidden w-full h-full pointer-events-none select-none z-0">
-                <img src={img.url} className="absolute inset-0 w-full h-full object-cover opacity-40 blur-xl scale-125 pointer-events-none" alt="" />
-              </div>
-            )}
-            
-            {img.url.match(/\.(mp4|webm|ogg|mov|m4v)$/i) ? (
-              <video src={`${img.url}#t=0.1`} preload="metadata" playsInline controls className="relative z-10 w-full h-full object-contain" onClick={(e) => e.stopPropagation()} />
-            ) : (
-              <img 
-                src={img.url} 
-                alt={img.title} 
-                className="relative z-10 w-full h-full object-contain transition-transform duration-500 group-hover:scale-110" 
-              />
-            )}
-          </motion.div>
+      {allImages.length === 0 && (
+        <p className="paper-card max-w-sm mx-auto px-6 py-10 text-center font-body text-ink-soft">{t.albumEmpty}</p>
+      )}
+
+      <div className="flex items-start gap-3 sm:gap-4">
+        {columns.map((col, c) => (
+          <div key={c} className="flex-1 min-w-0 flex flex-col gap-3 sm:gap-4">
+            {col.map(({ idx, ...img }) => (
+              <motion.button
+                type="button"
+                key={idx}
+                initial={{ opacity: 0, y: 16 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: '-20px' }}
+                transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => setSelectedIndex(idx)}
+                className="block w-full rounded-[18px] overflow-hidden bg-paper-deep relative cursor-zoom-in group shadow-[0_14px_30px_-18px_rgba(110,42,49,0.4)]"
+              >
+                {isVideoUrl(img.url) ? (
+                  <>
+                    <video src={`${img.url}#t=0.1`} preload="metadata" muted playsInline className="w-full h-auto min-h-[140px] object-cover bg-black/80 pointer-events-none" />
+                    <span className="absolute inset-0 flex items-center justify-center">
+                      <span className="w-12 h-12 rounded-full glass flex items-center justify-center text-rose">
+                        <Play size={20} className="fill-rose ml-0.5" />
+                      </span>
+                    </span>
+                  </>
+                ) : (
+                  <img
+                    src={img.url}
+                    alt={img.title}
+                    loading="lazy"
+                    className="w-full h-auto block transition-transform duration-700 group-hover:scale-[1.04]"
+                  />
+                )}
+                <span className="absolute inset-x-0 bottom-0 p-3 pt-10 text-left bg-gradient-to-t from-black/45 to-transparent opacity-0 group-hover:opacity-100 transition-opacity">
+                  <span className="block font-body text-[13px] text-white truncate">{img.title}</span>
+                  <span className="block font-label text-[10px] text-white/75">{img.date}</span>
+                </span>
+              </motion.button>
+            ))}
+          </div>
         ))}
       </div>
 
       {displayCount < allImages.length && (
-        <div className="mt-20 text-center flex flex-col items-center">
-          <div className="w-12 h-[1px] bg-outline-variant mb-6"></div>
-          <button 
+        <div className="mt-14 text-center">
+          <button
             onClick={() => setDisplayCount(prev => prev + 24)}
-            className="font-body text-xs uppercase tracking-widest text-secondary hover:text-primary transition-colors flex items-center gap-2"
+            className="btn-soft"
           >
             {t.loadMore}
-            <ChevronRight size={14} className="rotate-90" />
+            <ChevronDown size={16} />
           </button>
         </div>
       )}
@@ -88,7 +110,7 @@ export const AlbumScreen = ({ memories, t }: { memories: Memory[], t: any }) => 
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setSelectedIndex(null)}
-              className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-[2px] flex items-center justify-center p-0 cursor-default"
+              className="fixed inset-0 z-[100] bg-[#1a1012]/95 backdrop-blur-sm flex items-center justify-center p-0 cursor-default"
             >
               <button 
                 onClick={(e) => { e.stopPropagation(); setSelectedIndex(null); }}
@@ -139,7 +161,7 @@ export const AlbumScreen = ({ memories, t }: { memories: Memory[], t: any }) => 
                     }}
                     className="w-full h-full flex items-center justify-center cursor-grab active:cursor-grabbing hover:cursor-grab touch-none"
                   >
-                    {allImages[selectedIndex].url.match(/\.(mp4|webm|ogg|mov|m4v)$/i) ? (
+                    {isVideoUrl(allImages[selectedIndex].url) ? (
                       <video src={allImages[selectedIndex].url} controls playsInline className="w-full h-full object-contain rounded-lg shadow-[0_0_40px_rgba(0,0,0,0.5)]" />
                     ) : (
                       <img 

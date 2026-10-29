@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Plus, X, Calendar } from 'lucide-react';
 import { Screen, Memory, UserProfile } from '../types';
+import { showToast } from '../components/Toast';
 
 export const MemoryFormScreen = ({ t, onSave, onNavigate, initialMemory, profile, onUpdateProfile }: { t: any, onSave: (m: Memory) => void, onNavigate: (s: Screen) => void, initialMemory?: Memory, profile?: UserProfile | null, onUpdateProfile?: (p: UserProfile) => void }) => {
   const [title, setTitle] = useState(initialMemory?.title || '');
@@ -29,9 +30,12 @@ export const MemoryFormScreen = ({ t, onSave, onNavigate, initialMemory, profile
           const newProf = await res.json();
           if (onUpdateProfile) onUpdateProfile(newProf);
           setSelectedTags(prev => [...prev, trimmed]);
+        } else {
+          showToast(t.tagSaveFailed);
         }
       } catch (e) {
         console.error(e);
+        showToast(t.tagSaveFailed);
       }
     }
     setNewTagInput('');
@@ -39,6 +43,10 @@ export const MemoryFormScreen = ({ t, onSave, onNavigate, initialMemory, profile
   };
 
   const [localFiles, setLocalFiles] = useState<File[]>([]);
+
+  // One preview URL per file, released when the file list changes or the form closes
+  const localPreviews = useMemo(() => localFiles.map(file => URL.createObjectURL(file)), [localFiles]);
+  useEffect(() => () => localPreviews.forEach(url => URL.revokeObjectURL(url)), [localPreviews]);
   const [networkUrls, setNetworkUrls] = useState<string[]>(initialMemory?.images || []);
   const [networkInput, setNetworkInput] = useState('');
 
@@ -49,9 +57,13 @@ export const MemoryFormScreen = ({ t, onSave, onNavigate, initialMemory, profile
   };
 
   const addNetworkUrl = () => {
-    if (networkInput && networkInput.startsWith('http')) {
-      setNetworkUrls(prev => [...prev, networkInput]);
+    const trimmed = networkInput.trim();
+    if (!trimmed) return;
+    if (/^https?:\/\//i.test(trimmed)) {
+      setNetworkUrls(prev => [...prev, trimmed]);
       setNetworkInput('');
+    } else {
+      showToast(t.invalidUrl);
     }
   };
 
@@ -81,12 +93,11 @@ export const MemoryFormScreen = ({ t, onSave, onNavigate, initialMemory, profile
           const { urls } = await uploadRes.json();
           finalMediaUrls = [...finalMediaUrls, ...urls];
         } else {
+          // Stop here rather than saving the memory without its photos; the files stay in the form for a retry
           console.error("Upload failed");
+          showToast(t.uploadFailed);
+          return;
         }
-      }
-
-      if (finalMediaUrls.length === 0) {
-        finalMediaUrls = [];
       }
 
       const url = initialMemory ? `/api/memories/${initialMemory.id}` : '/api/memories';
@@ -109,28 +120,31 @@ export const MemoryFormScreen = ({ t, onSave, onNavigate, initialMemory, profile
         const memoryData = await res.json();
         onSave(memoryData);
         onNavigate('timeline');
+      } else {
+        showToast(t.saveFailed);
       }
     } catch (error) {
       console.error(error);
+      showToast(t.saveFailed);
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-  <main className="pt-24 pb-32 px-6 max-w-screen-md mx-auto animate-fade-in">
+  <main className="pt-24 sm:pt-28 pb-36 px-5 max-w-2xl mx-auto animate-fade-in">
     <section className="mb-12">
-      <h2 className="font-headline text-4xl text-on-surface mb-2 italic">{initialMemory ? t.editMemory : t.captureMoment}</h2>
-      <p className="text-on-surface-variant font-body">{t.addDescription}</p>
+      <h2 className="font-body font-semibold text-[32px] sm:text-[38px] tracking-tight text-ink mb-2">{initialMemory ? t.editMemory : t.captureMoment}</h2>
+      <p className="text-ink-soft font-body text-[15px]">{t.addDescription}</p>
     </section>
 
     <form className="space-y-10" onSubmit={handleSubmit}>
       <div className="space-y-4">
-        <label className="font-body text-sm uppercase tracking-widest text-secondary block ml-1">{t.addMedia}</label>
+        <label className="field-label">{t.addMedia}</label>
         
         <div className="grid grid-cols-3 gap-4">
           {networkUrls.map((url, i) => (
-            <div key={'net'+i} className="aspect-square bg-surface-container rounded-xl overflow-hidden shadow-sm relative group">
+            <div key={'net'+i} className="aspect-square bg-paper-deep rounded-2xl overflow-hidden shadow-[0_10px_24px_-16px_rgba(110,42,49,0.45)] relative group">
               {url.match(/\.(mp4|webm|ogg|mov|m4v|hevc|h265)$/i) ? (
                 <video src={`${url}#t=0.1`} preload="metadata" playsInline controls className="w-full h-full object-contain" onClick={(e) => e.stopPropagation()} />
               ) : (
@@ -140,41 +154,41 @@ export const MemoryFormScreen = ({ t, onSave, onNavigate, initialMemory, profile
             </div>
           ))}
           {localFiles.map((file, i) => (
-            <div key={'loc'+i} className="aspect-square bg-surface-container rounded-xl overflow-hidden shadow-sm relative group">
+            <div key={'loc'+i} className="aspect-square bg-paper-deep rounded-2xl overflow-hidden shadow-[0_10px_24px_-16px_rgba(110,42,49,0.45)] relative group">
               {file.type.startsWith('video/') ? (
-                <video src={`${URL.createObjectURL(file)}#t=0.1`} preload="metadata" playsInline controls className="w-full h-full object-contain" onClick={(e) => e.stopPropagation()} />
+                <video src={`${localPreviews[i]}#t=0.1`} preload="metadata" playsInline controls className="w-full h-full object-contain" onClick={(e) => e.stopPropagation()} />
               ) : (
-                <img src={URL.createObjectURL(file)} alt="Preview" className="w-full h-full object-cover" />
+                <img src={localPreviews[i]} alt="Preview" className="w-full h-full object-cover" />
               )}
               <button type="button" onClick={() => removeLocalFile(i)} className="absolute top-2 right-2 bg-black/50 text-white rounded-full p-1.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"><X size={14}/></button>
             </div>
           ))}
 
-          <label className="aspect-square cursor-pointer rounded-xl border-2 border-dashed border-outline-variant flex flex-col items-center justify-center text-outline transition-all hover:bg-surface-container-low hover:border-primary/40 group relative overflow-hidden">
+          <label className="aspect-square cursor-pointer rounded-2xl border-[1.5px] border-dashed border-rose/35 bg-blush/40 flex flex-col items-center justify-center text-rose transition-all hover:bg-blush hover:border-rose/60 group relative overflow-hidden">
             <input type="file" multiple accept="image/*,video/*,.hevc,.h265,.mov,.mp4" className="absolute inset-0 opacity-0 cursor-pointer" onChange={handleFileChange} />
-            <Plus size={32} className="group-hover:scale-110 transition-transform" />
-            <span className="font-body text-[10px] mt-1 opacity-60">本地上传</span>
+            <Plus size={28} className="group-hover:scale-110 transition-transform" />
+            <span className="font-label text-[11px] font-semibold mt-1">{t.localUpload}</span>
           </label>
         </div>
         
         <div className="mt-4 flex flex-col sm:flex-row gap-2">
           <input 
             type="url" 
-            placeholder="粘贴网络图片/视频URL" 
-            className="flex-1 w-full bg-surface-container-low border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-primary-container/30 text-on-surface"
+            placeholder={t.mediaUrlPlaceholder} 
+            className="field flex-1 min-w-0 appearance-none"
             value={networkInput}
             onChange={(e) => setNetworkInput(e.target.value)}
           />
-          <button type="button" onClick={addNetworkUrl} className="w-full sm:w-auto px-4 py-3 sm:py-2 bg-primary/10 text-primary rounded-xl font-body text-sm hover:bg-primary/20 transition-colors whitespace-nowrap">
-            添加网络媒体
+          <button type="button" onClick={addNetworkUrl} className="btn-soft w-full sm:w-auto whitespace-nowrap">
+            {t.addNetworkMedia}
           </button>
         </div>
       </div>
 
       <div className="space-y-2">
-        <label className="font-body text-sm font-medium text-secondary ml-1">{t.title}</label>
+        <label className="field-label">{t.title}</label>
         <input 
-          className="w-full bg-surface-container-low border-none rounded-xl px-4 py-4 text-on-surface placeholder:text-outline/60 focus:ring-2 focus:ring-primary-container/30 font-headline text-xl italic" 
+          className="field font-body text-[18px] font-semibold" 
           placeholder={t.titlePlaceholder} 
           type="text"
           value={title}
@@ -184,9 +198,9 @@ export const MemoryFormScreen = ({ t, onSave, onNavigate, initialMemory, profile
       </div>
 
       <div className="space-y-2">
-        <label className="font-body text-sm font-medium text-secondary ml-1">{t.story}</label>
+        <label className="field-label">{t.story}</label>
         <textarea 
-          className="w-full bg-surface-container-low border-none rounded-xl px-4 py-4 text-on-surface-variant placeholder:text-outline/60 focus:ring-2 focus:ring-primary-container/30 font-body leading-relaxed" 
+          className="field font-body leading-[1.85] resize-y" 
           placeholder={t.storyPlaceholder} 
           rows={6}
           value={story}
@@ -197,10 +211,10 @@ export const MemoryFormScreen = ({ t, onSave, onNavigate, initialMemory, profile
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
         <div className="space-y-2">
-          <label className="font-body text-sm font-medium text-secondary ml-1">{t.date}</label>
+          <label className="field-label">{t.date}</label>
           <div className="relative">
             <input 
-              className="block flex-1 w-full min-w-0 max-w-full appearance-none bg-surface-container-low border-none rounded-xl px-4 py-4 text-on-surface focus:ring-2 focus:ring-primary-container/30 font-body" 
+              className="field flex-1 min-w-0 appearance-none font-body" 
               type="date" 
               value={date}
               onChange={(e) => setDate(e.target.value)}
@@ -210,14 +224,14 @@ export const MemoryFormScreen = ({ t, onSave, onNavigate, initialMemory, profile
           </div>
         </div>
         <div className="space-y-2">
-          <label className="font-body text-sm font-medium text-secondary ml-1">{t.tags}</label>
+          <label className="field-label">{t.tags}</label>
           <div className="flex flex-wrap gap-2 pt-1 items-center">
             {allAvailableTags.map((tag) => {
               const isActive = selectedTags.includes(tag);
               return (
                 <button 
                   key={tag} type="button" onClick={() => toggleTag(tag)}
-                  className={`px-4 py-2 rounded-full text-xs font-body transition-colors ${isActive ? 'bg-primary-container/20 border border-primary/20 text-primary font-bold' : 'bg-white border border-outline-variant/20 text-on-surface-variant hover:bg-primary-container hover:text-white'}`}
+                  className={`px-4 py-2 rounded-full text-[13px] font-label font-medium transition-all ${isActive ? 'bg-rose text-white border border-rose shadow-[0_6px_14px_-8px_rgba(158,63,72,0.7)]' : 'bg-white border border-ink/10 text-ink-soft hover:border-rose/40 hover:text-rose'}`}
                 >
                   {tag}
                 </button>
@@ -240,7 +254,7 @@ export const MemoryFormScreen = ({ t, onSave, onNavigate, initialMemory, profile
                 </button>
               </div>
             ) : (
-              <button type="button" onClick={() => setIsAddingTag(true)} className="w-8 h-8 flex items-center justify-center bg-surface-container-high rounded-full text-outline hover:text-primary transition-colors">
+              <button type="button" onClick={() => setIsAddingTag(true)} className="w-8 h-8 flex items-center justify-center bg-white border border-dashed border-rose/40 rounded-full text-rose hover:bg-blush transition-colors">
                 <Plus size={16} />
               </button>
             )}
@@ -252,11 +266,11 @@ export const MemoryFormScreen = ({ t, onSave, onNavigate, initialMemory, profile
         <button 
           type="submit" 
           disabled={isSubmitting}
-          className="w-full md:w-auto md:min-w-[280px] h-14 bg-gradient-to-r from-primary to-primary-container text-white font-body font-bold text-lg rounded-full shadow-lg shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:active:scale-100"
+          className="btn-primary w-full md:w-auto md:min-w-[280px] text-[16px]"
         >
           {isSubmitting ? '...' : (initialMemory ? t.saveChanges : t.save)}
         </button>
-        <p className="mt-4 text-[10px] font-body uppercase tracking-widest text-outline/60">{t.eternity}</p>
+        <p className="mt-4 font-label text-[11px] tracking-[0.2em] uppercase text-muted">{t.eternity}</p>
       </div>
     </form>
   </main>

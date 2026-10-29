@@ -3,11 +3,11 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Screen, Memory, UserProfile } from './types';
 import { Language, translations } from './utils/i18n';
 import { MAIN_PASSCODE, ADD_PASSCODE, UNLOCK_EXPIRY_MS } from './utils/constants';
-import { Music, Pause } from 'lucide-react';
 
 import { TopBar } from './components/TopBar';
 import { BottomNav } from './components/BottomNav';
 import { PasscodeScreen } from './components/PasscodeScreen';
+import { Toaster, showToast } from './components/Toast';
 import { TimelineScreen } from './screens/TimelineScreen';
 import { MemoryDetailScreen } from './screens/MemoryDetailScreen';
 import { ProfileScreen } from './screens/ProfileScreen';
@@ -56,10 +56,14 @@ export default function App() {
       if (res.ok) {
         setMemories(prev => prev.filter(m => m.id !== id));
         setScreen('timeline');
+        return;
       }
     } catch (e) {
       console.error(e);
     }
+    // Leave the passcode screen and return to the memory so the user isn't stranded
+    showToast(t.deleteFailed);
+    setScreen('detail');
   };
 
   const [lang, setLang] = useState<Language>(() => {
@@ -78,8 +82,10 @@ export default function App() {
         ]);
         if (profileRes.ok) setProfile(await profileRes.json());
         if (memoriesRes.ok) setMemories(await memoriesRes.json());
+        else showToast(t.loadFailed);
       } catch (error) {
         console.error('Failed to fetch data', error);
+        showToast(t.loadFailed);
       }
     };
     fetchData();
@@ -125,9 +131,8 @@ export default function App() {
         setIsPlayingBgm(false);
         userPausedBgm.current = true;
       } else {
-        audioRef.current.play();
-        setIsPlayingBgm(true);
         userPausedBgm.current = false;
+        audioRef.current.play().then(() => setIsPlayingBgm(true)).catch(() => setIsPlayingBgm(false));
       }
     }
   };
@@ -204,7 +209,7 @@ export default function App() {
   }, [screen]);
 
   return (
-    <div className="min-h-screen bg-background text-on-surface font-body selection:bg-primary-container/30">
+    <div className="min-h-screen text-ink font-body">
       <AnimatePresence mode="wait">
         {screen === 'lock' && (
           <motion.div key="lock" exit={{ opacity: 0, scale: 0.95 }}>
@@ -222,16 +227,26 @@ export default function App() {
             key="app" 
             initial={{ opacity: 0 }} 
             animate={{ opacity: 1 }}
-            className="pb-32"
+            className=""
           >
-            <TopBar title={t.ourStory} avatarUrl={profile?.avatarUrl} onClickAvatar={attemptProfile} />
+            <TopBar
+              title={t.ourStory}
+              avatarUrl={profile?.avatarUrl}
+              onClickAvatar={attemptProfile}
+              hasMusic={!!profile?.bgmUrl}
+              isPlaying={isPlayingBgm}
+              onToggleMusic={toggleBgm}
+            />
             
             {screen === 'timeline' && (
               <TimelineScreen 
                 memories={memories} 
+                profile={profile}
                 t={t} 
                 lang={lang} 
                 onSelectMemory={(m) => { setActiveMemory(m); setScreen('detail'); }} 
+                onAdd={() => setScreen('add')}
+                onProfile={attemptProfile}
               />
             )}
             
@@ -305,26 +320,14 @@ export default function App() {
               />
             )}
 
-            <BottomNav activeScreen={screen} onNavigate={navigateTo} t={t} />
+            <BottomNav activeScreen={screen} onNavigate={navigateTo} onProfile={attemptProfile} t={t} />
 
-            {profile?.bgmUrl && screen !== 'lock' && (
-              <>
-                <audio ref={audioRef} src={profile.bgmUrl} loop />
-                <button 
-                  onClick={toggleBgm}
-                  className="fixed right-6 bottom-24 z-[90] w-12 h-12 bg-white/80 backdrop-blur-md flex items-center justify-center rounded-full shadow-lg border border-outline-variant/20 hover:scale-110 active:scale-95 transition-all group"
-                >
-                  {isPlayingBgm ? (
-                    <Pause size={20} className="text-primary" />
-                  ) : (
-                    <Music size={20} className="text-secondary group-hover:text-primary transition-colors" />
-                  )}
-                </button>
-              </>
-            )}
+            {profile?.bgmUrl && <audio ref={audioRef} src={profile.bgmUrl} loop />}
           </motion.div>
         )}
       </AnimatePresence>
+
+      <Toaster dismissLabel={t.dismiss} />
     </div>
   );
 }
