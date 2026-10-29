@@ -3,7 +3,9 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Memory } from '../types';
-import { calculateDaysAgo, isVideoUrl } from '../utils/date';
+import { calculateDaysAgo } from '../utils/date';
+import { isVideoUrl } from '../utils/media';
+import { Thumb, ProgressiveImage } from './MediaImage';
 
 export const MemoryCard = ({ memory, index, t, formatDate, onClick }: { memory: Memory, index: number, t: any, formatDate: (s: string) => string, onClick?: () => void }) => {
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -84,14 +86,14 @@ export const MemoryCard = ({ memory, index, t, formatDate, onClick }: { memory: 
                   {/* Blurred Background Layer for elegant letterboxing (isolated to prevent Safari layout bleed) */}
                   {!isVideoUrl(img) && (
                     <div className="absolute inset-0 overflow-hidden w-full h-full pointer-events-none select-none z-0">
-                      <img src={img} className="absolute inset-0 w-full h-full object-cover opacity-60 blur-2xl scale-125 pointer-events-none" alt="" />
+                      <Thumb src={img} className="absolute inset-0 w-full h-full object-cover opacity-60 blur-2xl scale-125 pointer-events-none" alt="" />
                     </div>
                   )}
 
                   {isVideoUrl(img) ? (
                     <video src={`${img}#t=0.1`} preload="metadata" playsInline controls className="relative z-10 w-full h-full object-contain bg-black/80" onClick={(e) => e.stopPropagation()} />
                   ) : (
-                    <img
+                    <Thumb
                       src={img}
                       alt={`${memory.title} ${i+1}`}
                       loading="lazy"
@@ -207,8 +209,8 @@ export const MemoryCard = ({ memory, index, t, formatDate, onClick }: { memory: 
                     {isVideoUrl(memory.images[selectedIndex]) ? (
                       <video src={memory.images[selectedIndex]} controls playsInline className="w-full h-full object-contain rounded-lg shadow-[0_0_40px_rgba(0,0,0,0.5)]" />
                     ) : (
-                      <img 
-                        src={memory.images[selectedIndex]} 
+                      <ProgressiveImage
+                        src={memory.images[selectedIndex]}
                         alt="Enlarged" 
                         className="w-full h-full object-contain rounded-lg shadow-[0_0_40px_rgba(0,0,0,0.5)] select-none pointer-events-none" 
                         draggable={false}

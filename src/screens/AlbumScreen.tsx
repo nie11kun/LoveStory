@@ -3,7 +3,8 @@ import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { ChevronRight, ChevronLeft, ChevronDown, X, Play } from 'lucide-react';
 import { Memory } from '../types';
-import { isVideoUrl } from '../utils/date';
+import { isVideoUrl } from '../utils/media';
+import { Thumb, ProgressiveImage } from '../components/MediaImage';
 import { useColumnCount, toColumns } from '../utils/useColumnCount';
 
 export const AlbumScreen = ({ memories, t }: { memories: Memory[], t: any }) => {
@@ -73,7 +74,7 @@ export const AlbumScreen = ({ memories, t }: { memories: Memory[], t: any }) => 
                     </span>
                   </>
                 ) : (
-                  <img
+                  <Thumb
                     src={img.url}
                     alt={img.title}
                     loading="lazy"
@@ -164,8 +165,8 @@ export const AlbumScreen = ({ memories, t }: { memories: Memory[], t: any }) => 
                     {isVideoUrl(allImages[selectedIndex].url) ? (
                       <video src={allImages[selectedIndex].url} controls playsInline className="w-full h-full object-contain rounded-lg shadow-[0_0_40px_rgba(0,0,0,0.5)]" />
                     ) : (
-                      <img 
-                        src={allImages[selectedIndex].url} 
+                      <ProgressiveImage
+                        src={allImages[selectedIndex].url}
                         alt="Enlarged" 
                         className="w-full h-full object-contain rounded-lg shadow-[0_0_40px_rgba(0,0,0,0.5)] select-none pointer-events-none" 
                         draggable={false}

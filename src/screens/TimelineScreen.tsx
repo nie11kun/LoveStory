@@ -5,7 +5,9 @@ import { RisingHearts } from '../components/RisingHearts';
 import { Memory, UserProfile } from '../types';
 import { Language } from '../utils/i18n';
 import { useColumnCount, toColumns } from '../utils/useColumnCount';
-import { calculateDaysAgo, calculateDaysUntilAnniversary, isVideoUrl } from '../utils/date';
+import { calculateDaysAgo, calculateDaysUntilAnniversary } from '../utils/date';
+import { isVideoUrl } from '../utils/media';
+import { Thumb } from '../components/MediaImage';
 import { ChevronDown, Heart, PenLine, CalendarHeart, Sparkles } from 'lucide-react';
 
 const EASE = [0.22, 1, 0.36, 1] as const;
@@ -61,7 +63,7 @@ const PolaroidFan = ({ images }: { images: string[] }) => {
                 {isVideoUrl(src) ? (
                   <video src={`${src}#t=0.1`} preload="metadata" muted playsInline className="w-full h-full object-cover" />
                 ) : (
-                  <img src={src} alt="" className="w-full h-full object-cover" />
+                  <Thumb src={src} alt="" className="w-full h-full object-cover" />
                 )}
               </div>
             </div>

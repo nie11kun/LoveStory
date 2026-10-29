@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Heart, Music } from 'lucide-react';
+import { Thumb } from './MediaImage';
 
 export const TopBar = ({ title, avatarUrl, onClickAvatar, hasMusic, isPlaying, onToggleMusic }: {
   title: string;
@@ -58,7 +59,7 @@ export const TopBar = ({ title, avatarUrl, onClickAvatar, hasMusic, isPlaying, o
           onClick={onClickAvatar}
         >
           {avatarUrl ? (
-            <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+            <Thumb src={avatarUrl} alt="" className="w-full h-full object-cover" />
           ) : (
             <span className="w-full h-full flex items-center justify-center bg-blush text-rose">
               <Heart size={16} className="fill-rose" />
