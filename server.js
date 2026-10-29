@@ -407,6 +407,10 @@ setTimeout(() => {
   cleanupStaleData();
 }, 1000);
 
+// Built assets (JS, CSS, fonts) have content hashes in their names, so browsers can cache them for good
+app.use('/assets', express.static(path.join(DIST_DIR, 'assets'), { immutable: true, maxAge: '1y' }));
+// A missing asset (e.g. an old hash after a deploy) is a plain 404, not the SPA's index.html
+app.use('/assets', (req, res) => res.sendStatus(404));
 // Serve React SPA fallback
 app.use(express.static(DIST_DIR, { index: false }));
 // Handle all other requests by serving the injected index.html (SPA fallback)

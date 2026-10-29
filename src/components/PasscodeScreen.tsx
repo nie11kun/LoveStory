@@ -1,17 +1,19 @@
-import React, { useState } from 'react';
-import { Lock, X } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { motion } from 'motion/react';
+import { Heart, X } from 'lucide-react';
 import { Keypad } from './Keypad';
+import { RisingHearts } from './RisingHearts';
 
-export const PasscodeScreen = ({ 
-  title, 
-  subtitle, 
-  targetPasscode, 
+export const PasscodeScreen = ({
+  title,
+  subtitle,
+  targetPasscode,
   onSuccess,
   onCancel
-}: { 
-  title: string; 
-  subtitle: string; 
-  targetPasscode: string; 
+}: {
+  title: string;
+  subtitle: string;
+  targetPasscode: string;
   onSuccess: () => void;
   onCancel?: () => void;
 }) => {
@@ -40,40 +42,82 @@ export const PasscodeScreen = ({
     setInput(input.slice(0, -1));
   };
 
+  // Physical keyboard: digits (incl. numpad), Backspace, and Escape to cancel.
+  // The ref keeps one listener while still calling the latest handlers.
+  const keyHandlers = useRef({ handleInput, handleDelete, onCancel });
+  keyHandlers.current = { handleInput, handleDelete, onCancel };
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const { handleInput, handleDelete, onCancel } = keyHandlers.current;
+      if (/^[0-9]$/.test(e.key)) {
+        e.preventDefault();
+        handleInput(e.key);
+      } else if (e.key === 'Backspace') {
+        e.preventDefault();
+        handleDelete();
+      } else if (e.key === 'Escape' && onCancel) {
+        onCancel();
+      }
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, []);
+
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center px-8 bg-background relative overflow-hidden">
-      <div className="absolute -top-24 -left-24 w-64 h-64 bg-primary/5 rounded-full blur-3xl pointer-events-none"></div>
-      <div className="absolute -bottom-24 -right-24 w-80 h-80 bg-secondary/5 rounded-full blur-3xl pointer-events-none"></div>
+    <div className="fixed inset-0 z-[60] flex flex-col items-center justify-center px-8 overflow-hidden bg-[linear-gradient(170deg,#fbe6e1_0%,#fbf5ef_48%,#f6e7d8_100%)]">
+      <RisingHearts />
 
       {onCancel && (
-        <button 
+        <button
           onClick={onCancel}
-          className="absolute top-8 left-8 w-12 h-12 flex items-center justify-center rounded-full hover:bg-surface-container transition-colors"
+          aria-label="Close"
+          className="absolute top-[calc(env(safe-area-inset-top)+16px)] left-5 w-11 h-11 flex items-center justify-center rounded-full glass text-ink-soft"
         >
-          <X size={24} />
+          <X size={20} />
         </button>
       )}
 
-      <div className="text-center mb-6 space-y-4 max-w-md">
-        <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-surface-container-low mb-2 shadow-sm">
-          <Lock size={40} className="text-primary" />
+      <motion.div
+        initial={{ opacity: 0, y: 16 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.7, ease: [0.22, 1, 0.36, 1] }}
+        className="relative w-full flex flex-col items-center"
+      >
+        <div className="relative mb-6">
+          <span className="absolute inset-0 rounded-full bg-rose/20 blur-xl" />
+          <div className="relative w-[72px] h-[72px] rounded-full bg-gradient-to-br from-[#d6707a] to-[#a8434c] flex items-center justify-center shadow-[0_14px_30px_-10px_rgba(158,63,72,0.6)]">
+            <Heart size={30} className="text-white fill-white animate-heartbeat" />
+          </div>
         </div>
-        <h1 className="font-headline font-bold text-3xl sm:text-4xl tracking-tight text-on-surface">{title}</h1>
-        <p className="font-headline italic text-on-surface-variant text-lg">{subtitle}</p>
-      </div>
 
-      <div className={`flex gap-6 mb-6 transition-transform ${error ? 'animate-shake' : ''}`}>
-        {[0, 1, 2, 3].map((i) => (
-          <div 
-            key={i} 
-            className={`w-4 h-4 rounded-full transition-all duration-200 ${
-              i < input.length ? 'bg-primary shadow-[0_0_12px_rgba(139,76,80,0.3)]' : 'bg-surface-variant'
-            }`}
-          ></div>
-        ))}
-      </div>
+        <p className="eyebrow mb-3">Love Story</p>
+        <h1 className="font-body font-semibold text-[28px] sm:text-[32px] tracking-tight text-ink text-center">{title}</h1>
+        <p className="mt-2 font-body text-[15px] text-ink-soft text-center">{subtitle}</p>
 
-      <Keypad onInput={handleInput} onDelete={handleDelete} />
+        <div
+          className={`flex gap-5 mt-9 mb-10 ${error ? 'animate-shake' : ''}`}
+          role="status"
+          aria-label={`${input.length} / 4`}
+        >
+          {[0, 1, 2, 3].map((i) => {
+            const filled = i < input.length;
+            return (
+              <Heart
+                key={i}
+                size={20}
+                strokeWidth={1.8}
+                className={`transition-all duration-200 ${
+                  error ? 'text-rose-deep fill-rose-deep' : filled ? 'text-rose fill-rose scale-110' : 'text-muted/60 fill-transparent'
+                }`}
+              />
+            );
+          })}
+        </div>
+
+        <Keypad onInput={handleInput} onDelete={handleDelete} />
+      </motion.div>
     </div>
   );
 };

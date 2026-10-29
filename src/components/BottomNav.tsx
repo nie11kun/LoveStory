@@ -1,35 +1,64 @@
 import React from 'react';
-import { History, Image as ImageIcon, PlusCircle, Settings as SettingsIcon } from 'lucide-react';
+import { motion } from 'motion/react';
+import { BookHeart, Images, Plus, UserRound, Settings as SettingsIcon } from 'lucide-react';
 import { Screen } from '../types';
 
-export const BottomNav = ({ activeScreen, onNavigate, t }: { activeScreen: Screen, onNavigate: (s: Screen) => void, t: any }) => {
-  if (activeScreen === 'lock') return null;
+export const BottomNav = ({ activeScreen, onNavigate, onProfile, t }: { activeScreen: Screen, onNavigate: (s: Screen) => void, onProfile: () => void, t: any }) => {
+  if (activeScreen === 'lock' || activeScreen === 'passcode_verify') return null;
 
-  const tabs: { id: Screen; icon: any; label: string }[] = [
-    { id: 'timeline', icon: History, label: t.timeline },
-    { id: 'album', icon: ImageIcon, label: t.album },
-    { id: 'add', icon: PlusCircle, label: t.add },
+  const current = activeScreen === 'detail' ? 'timeline' : activeScreen === 'edit' ? 'add' : activeScreen;
+
+  const tabs: { id: Screen; icon: any; label: string; onClick?: () => void }[] = [
+    { id: 'timeline', icon: BookHeart, label: t.timeline },
+    { id: 'album', icon: Images, label: t.album },
+    { id: 'add', icon: Plus, label: t.add },
+    { id: 'profile', icon: UserRound, label: t.us, onClick: onProfile },
     { id: 'settings', icon: SettingsIcon, label: t.settings },
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 w-full flex justify-around items-center pt-3 pb-8 px-4 bg-surface-container-highest/70 backdrop-blur-xl rounded-t-[2.5rem] shadow-[0_-4px_24px_rgba(28,27,26,0.06)] z-50">
-      {tabs.map((tab) => {
-        const isActive = activeScreen === tab.id;
-        const Icon = tab.icon;
-        return (
-          <button
-            key={tab.id}
-            onClick={() => onNavigate(tab.id)}
-            className={`flex flex-col items-center justify-center transition-all duration-300 ${
-              isActive ? 'text-primary scale-110' : 'text-secondary opacity-60'
-            }`}
-          >
-            <Icon size={24} fill={isActive ? 'currentColor' : 'none'} />
-            <span className="font-body font-medium text-[10px] uppercase tracking-widest mt-1">{tab.label}</span>
-          </button>
-        );
-      })}
+    <nav className="fixed bottom-0 inset-x-0 z-50 flex justify-center px-4 pointer-events-none pb-[calc(env(safe-area-inset-bottom)+12px)]">
+      <div className="glass pointer-events-auto w-full max-w-[420px] h-[68px] rounded-[28px] flex items-center justify-between px-2">
+        {tabs.map((tab) => {
+          const isActive = current === tab.id;
+          const Icon = tab.icon;
+          const handle = tab.onClick || (() => onNavigate(tab.id));
+
+          if (tab.id === 'add') {
+            return (
+              <button
+                key={tab.id}
+                onClick={handle}
+                aria-label={tab.label}
+                className="relative -mt-7 w-[58px] h-[58px] shrink-0 rounded-full flex items-center justify-center text-white bg-gradient-to-br from-[#d6707a] to-[#a8434c] shadow-[0_12px_24px_-8px_rgba(158,63,72,0.65)] ring-[5px] ring-paper active:scale-95 transition-transform"
+              >
+                <Icon size={26} strokeWidth={2.4} />
+              </button>
+            );
+          }
+
+          return (
+            <button
+              key={tab.id}
+              onClick={handle}
+              aria-current={isActive ? 'page' : undefined}
+              className={`relative flex-1 h-full flex flex-col items-center justify-center gap-1 transition-colors ${
+                isActive ? 'text-rose' : 'text-muted hover:text-ink-soft'
+              }`}
+            >
+              {isActive && (
+                <motion.span
+                  layoutId="dock-pill"
+                  className="absolute inset-x-1.5 inset-y-2 rounded-[20px] bg-blush/80"
+                  transition={{ type: 'spring', stiffness: 420, damping: 34 }}
+                />
+              )}
+              <Icon size={21} strokeWidth={isActive ? 2.3 : 1.8} className="relative" />
+              <span className="relative font-label text-[10px] font-semibold tracking-wide">{tab.label}</span>
+            </button>
+          );
+        })}
+      </div>
     </nav>
   );
 };

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronRight } from 'lucide-react';
+import { ChevronLeft, PenLine, Trash2 } from 'lucide-react';
 import { MemoryCard } from '../components/MemoryCard';
 import { Memory } from '../types';
 import { Language } from '../utils/i18n';
@@ -14,23 +14,26 @@ export const MemoryDetailScreen = ({ memory, onBack, onEdit, onDelete, t, lang }
   };
 
   return (
-    <main className="pt-24 pb-32 px-6 max-w-2xl mx-auto animate-fade-in relative">
-      <div className="flex justify-between items-center mb-6">
-        <button onClick={onBack} className="p-2 -ml-2 text-secondary hover:text-primary transition-colors flex items-center">
-          <ChevronRight className="rotate-180" size={24} />
-          <span className="font-body text-sm ml-1">{t.timeline}</span>
+    <main className="pt-24 sm:pt-28 pb-36 px-5 max-w-2xl mx-auto animate-fade-in relative">
+      <div className="flex justify-between items-center mb-5">
+        <button onClick={onBack} className="glass h-10 pl-2 pr-4 rounded-full text-ink-soft hover:text-rose transition-colors flex items-center gap-1">
+          <ChevronLeft size={20} />
+          <span className="font-label text-[13px] font-semibold">{t.timeline}</span>
         </button>
-        <div className="flex gap-4">
-          <button onClick={() => onEdit(memory)} className="text-secondary hover:text-primary transition-colors font-body text-sm font-medium">{t.edit}</button>
-          <button 
-            onClick={() => { if (window.confirm(t.confirmDelete)) onDelete(memory.id); }} 
-            className="text-primary hover:text-red-500 transition-colors font-body text-sm font-medium"
+        <div className="flex gap-2">
+          <button onClick={() => onEdit(memory)} aria-label={t.edit} className="glass w-10 h-10 rounded-full flex items-center justify-center text-ink-soft hover:text-rose transition-colors">
+            <PenLine size={17} />
+          </button>
+          <button
+            onClick={() => { if (window.confirm(t.confirmDelete)) onDelete(memory.id); }}
+            aria-label={t.delete}
+            className="glass w-10 h-10 rounded-full flex items-center justify-center text-rose hover:text-rose-deep transition-colors"
           >
-            {t.delete}
+            <Trash2 size={17} />
           </button>
         </div>
       </div>
-      
+
       <MemoryCard memory={memory} index={0} t={t} formatDate={formatDate} />
     </main>
   );
