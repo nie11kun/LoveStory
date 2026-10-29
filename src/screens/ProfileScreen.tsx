@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Upload, Calendar, X, Plus, ChevronRight, Loader2, Music, Camera, Heart } from 'lucide-react';
 import { UserProfile } from '../types';
 import { showToast } from '../components/Toast';
+import { Thumb } from '../components/MediaImage';
 
 export const ProfileScreen = ({ profile, onSave, onBack, t }: { profile?: UserProfile | null, onSave: (p: UserProfile) => void, onBack: () => void, t: any }) => {
   const initialTags = profile?.customTags || [];
@@ -164,7 +165,7 @@ export const ProfileScreen = ({ profile, onSave, onBack, t }: { profile?: UserPr
           <label className="relative cursor-pointer group rounded-full" aria-label={t.upload}>
             <span className="block w-32 h-32 rounded-full ring-4 ring-white overflow-hidden shadow-[0_18px_40px_-16px_rgba(110,42,49,0.5)]">
               {avatarUrl ? (
-                <img src={avatarUrl} alt="Avatar" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                <Thumb src={avatarUrl} alt="Avatar" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
               ) : (
                 <span className="w-full h-full flex items-center justify-center bg-blush text-rose"><Heart size={34} className="fill-rose/80" /></span>
               )}

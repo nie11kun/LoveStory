@@ -39,5 +39,3 @@ export const calculateDaysUntilAnniversary = (dateString: string): number => {
 
   return Math.round((next.getTime() - d2.getTime()) / (1000 * 60 * 60 * 24));
 };
-
-export const isVideoUrl = (url: string): boolean => /\.(mp4|webm|ogg|mov|m4v|hevc|h265)(\?|#|$)/i.test(url);

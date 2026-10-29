@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Plus, X, Calendar } from 'lucide-react';
 import { Screen, Memory, UserProfile } from '../types';
 import { showToast } from '../components/Toast';
+import { Thumb } from '../components/MediaImage';
 
 export const MemoryFormScreen = ({ t, onSave, onNavigate, initialMemory, profile, onUpdateProfile }: { t: any, onSave: (m: Memory) => void, onNavigate: (s: Screen) => void, initialMemory?: Memory, profile?: UserProfile | null, onUpdateProfile?: (p: UserProfile) => void }) => {
   const [title, setTitle] = useState(initialMemory?.title || '');
@@ -148,7 +149,7 @@ export const MemoryFormScreen = ({ t, onSave, onNavigate, initialMemory, profile
               {url.match(/\.(mp4|webm|ogg|mov|m4v|hevc|h265)$/i) ? (
                 <video src={`${url}#t=0.1`} preload="metadata" playsInline controls className="w-full h-full object-contain" onClick={(e) => e.stopPropagation()} />
               ) : (
-                <img src={url} alt="Preview" className="w-full h-full object-cover" />
+                <Thumb src={url} alt="Preview" className="w-full h-full object-cover" />
               )}
               <button type="button" onClick={() => removeNetworkUrl(i)} className="absolute top-2 right-2 bg-black/50 text-white rounded-full p-1.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"><X size={14}/></button>
             </div>

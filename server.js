@@ -6,6 +6,7 @@ import multer from 'multer';
 import dotenv from 'dotenv';
 import { S3Client, PutObjectCommand, DeleteObjectCommand, HeadObjectCommand } from '@aws-sdk/client-s3';
 import crypto from 'crypto';
+import { MEDIA_CACHE_CONTROL, thumbKeyFor, createThumbnail } from './lib/thumbnails.js';
 
 dotenv.config();
 
@@ -59,6 +60,26 @@ const getFileHash = (filePath) => {
   });
 };
 
+// Uploads a resized WebP next to an S3/R2 image so lists don't download full-size photos.
+// Best effort: the client falls back to the original when a thumbnail is missing.
+const ensureThumbnail = async (source, key) => {
+  const thumbKey = thumbKeyFor(key);
+  if (!s3Client || !thumbKey) return;
+  try {
+    try {
+      await s3Client.send(new HeadObjectCommand({ Bucket: process.env.S3_BUCKET_NAME, Key: thumbKey }));
+      return;
+    } catch {
+      // Not there yet
+    }
+    const body = await createThumbnail(source);
+    await s3Client.send(new PutObjectCommand({ Bucket: process.env.S3_BUCKET_NAME, Key: thumbKey, Body: body, ContentType: 'image/webp', CacheControl: MEDIA_CACHE_CONTROL }));
+    console.log(`🖼️ Thumbnail created: ${thumbKey}`);
+  } catch (error) {
+    console.error(`Thumbnail failed for ${key}:`, error.message);
+  }
+};
+
 // Helper to physically delete media from storage
 const deleteMediaByUrl = async (url, globalData) => {
   if (globalData) {
@@ -83,6 +104,10 @@ const deleteMediaByUrl = async (url, globalData) => {
         Key: key
       }));
       console.log(`🗑️ Deleted from S3: ${key}`);
+      const thumbKey = thumbKeyFor(key);
+      if (thumbKey) {
+        await s3Client.send(new DeleteObjectCommand({ Bucket: process.env.S3_BUCKET_NAME, Key: thumbKey }));
+      }
     } else if (url.startsWith('/uploads/')) {
       // It's a local file
       const fileName = url.replace('/uploads/', '');
@@ -184,8 +209,10 @@ app.post('/api/upload', upload.array('files', 10), async (req, res) => {
           const fileStream = fs.createReadStream(file.path);
           const mimeTypes = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.gif': 'image/gif', '.webp': 'image/webp', '.mp4': 'video/mp4', '.webm': 'video/webm', '.mov': 'video/quicktime', '.m4v': 'video/x-m4v', '.hevc': 'video/mp4', '.h265': 'video/mp4', '.mp3': 'audio/mpeg', '.wav': 'audio/wav', '.m4a': 'audio/mp4', '.ogg': 'audio/ogg' };
           const contentType = mimeTypes[ext] || file.mimetype;
-          await s3Client.send(new PutObjectCommand({ Bucket: process.env.S3_BUCKET_NAME, Key: fileName, Body: fileStream, ContentType: contentType }));
+          await s3Client.send(new PutObjectCommand({ Bucket: process.env.S3_BUCKET_NAME, Key: fileName, Body: fileStream, ContentType: contentType, CacheControl: MEDIA_CACHE_CONTROL }));
         }
+        // Also for deduplicated files, so re-uploading an older photo fills in a missing thumbnail
+        await ensureThumbnail(file.path, fileName);
         
         fs.unlinkSync(file.path); // Safely remove local temp file
         urls.push(`${s3PublicDomain}/${fileName}`);
@@ -320,7 +347,8 @@ const migrateLocalFilesToS3 = async () => {
             const mimeTypes = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.gif': 'image/gif', '.webp': 'image/webp', '.mp4': 'video/mp4', '.webm': 'video/webm', '.mov': 'video/quicktime', '.m4v': 'video/x-m4v', '.hevc': 'video/mp4', '.h265': 'video/mp4' };
             const contentType = mimeTypes[ext] || 'application/octet-stream';
 
-            await s3Client.send(new PutObjectCommand({ Bucket: process.env.S3_BUCKET_NAME, Key: s3Key, Body: fileStream, ContentType: contentType }));
+            await s3Client.send(new PutObjectCommand({ Bucket: process.env.S3_BUCKET_NAME, Key: s3Key, Body: fileStream, ContentType: contentType, CacheControl: MEDIA_CACHE_CONTROL }));
+            await ensureThumbnail(filePath, s3Key);
             
             memory.images[i] = `${s3PublicDomain}/${s3Key}`;
             updated = true;
@@ -343,7 +371,8 @@ const migrateLocalFilesToS3 = async () => {
         const ext = path.extname(fileName).toLowerCase();
         const mimeTypes = { '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.gif': 'image/gif', '.webp': 'image/webp' };
         
-        await s3Client.send(new PutObjectCommand({ Bucket: process.env.S3_BUCKET_NAME, Key: s3Key, Body: fileStream, ContentType: mimeTypes[ext] || 'application/octet-stream' }));
+        await s3Client.send(new PutObjectCommand({ Bucket: process.env.S3_BUCKET_NAME, Key: s3Key, Body: fileStream, ContentType: mimeTypes[ext] || 'application/octet-stream', CacheControl: MEDIA_CACHE_CONTROL }));
+        await ensureThumbnail(filePath, s3Key);
         data.profile.avatarUrl = `${s3PublicDomain}/${s3Key}`;
         updated = true;
         fs.unlinkSync(filePath);
@@ -363,7 +392,7 @@ const migrateLocalFilesToS3 = async () => {
         const ext = path.extname(fileName).toLowerCase();
         const mimeTypes = { '.mp3': 'audio/mpeg', '.wav': 'audio/wav', '.m4a': 'audio/mp4', '.ogg': 'audio/ogg' };
         
-        await s3Client.send(new PutObjectCommand({ Bucket: process.env.S3_BUCKET_NAME, Key: s3Key, Body: fileStream, ContentType: mimeTypes[ext] || 'application/octet-stream' }));
+        await s3Client.send(new PutObjectCommand({ Bucket: process.env.S3_BUCKET_NAME, Key: s3Key, Body: fileStream, ContentType: mimeTypes[ext] || 'application/octet-stream', CacheControl: MEDIA_CACHE_CONTROL }));
         data.profile.bgmUrl = `${s3PublicDomain}/${s3Key}`;
         updated = true;
         fs.unlinkSync(filePath);
